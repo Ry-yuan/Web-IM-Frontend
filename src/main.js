@@ -13,3 +13,7 @@ new Vue({
   components: { App },
   template: '<App/>'
 })
+
+// var xhr = new XMLHttpRequest();
+// xhr.open("GET","http://localhost:8080/api",true);
+// xhr.send();
