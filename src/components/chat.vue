@@ -11,15 +11,14 @@
       <mu-row gutter>
         <mu-col span="3" sm="3" md="3" lg="3" xl="3">
           <div class="grid-cell chat-userlist">
-            <mu-list>
+            <mu-list >
               <mu-sub-header>OnLine</mu-sub-header>
-              <mu-list-item avatar button :ripple="false">
-                <mu-list-item-action>
-                  <mu-avatar>
 
-                  </mu-avatar>
+              <mu-list-item avatar button :ripple="false" v-for="item in userlist" :key="item.user">
+                <mu-list-item-action>
+                  <mu-avatar></mu-avatar>
                 </mu-list-item-action>
-                <mu-list-item-title>Mike Li</mu-list-item-title>
+                <mu-list-item-title>{{item.user}}</mu-list-item-title>
               </mu-list-item>
             </mu-list>
           </div>
@@ -31,7 +30,7 @@
             </div>
             <div class="chat-inputText">
               <!-- <textarea></textarea> -->
-              <mu-text-field v-model="value10" multi-line :rows="4" full-width></mu-text-field><br/>
+              <mu-text-field v-model="message" multi-line :rows="4" full-width></mu-text-field><br/>
             </div>
           </div>
         </mu-col>
@@ -54,7 +53,32 @@
   <!-- </mu-flex> -->
 </template>
 <script>
-  export default {};
+  import io from 'socket.io-client';
+  export default {
+    data(){
+      return{
+        userInfo:{},
+        message:'',
+        userlist:[]
+      }
+    },
+    mounted(){
+      // 请求个人数据
+      this.$http.get('/api/chat').then((data)=>{
+        this.userInfo  = data.data.data;
+      }).catch((err)=>{console.log(err)});
+
+      var socket = io.connect('http://localhost:8000/');
+
+      //   接受广播的消息例子 登录用户显示
+      var that = this;
+      socket.on('broadcast message all',function(data){
+      that.userlist = data;
+      console.log('socket....');
+      console.log(this.userlist);
+  });
+    }
+  };
 
 </script>
 
@@ -67,6 +91,7 @@
   .chat-header {
     /* height: 100px; */
     border: 1px solid #000;
+    /* text-align: center; */
   }
 
   .chat-footer {

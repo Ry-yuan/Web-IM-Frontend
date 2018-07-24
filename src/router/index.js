@@ -6,9 +6,10 @@ import Login from '../page/login/login'
 Vue.use(Router)
 
 export default new Router({
+  mode:'history',
   routes: [
     {
-      path: '/',
+      path: '/chat',
       name: 'Chat',
       component: Chat
     },

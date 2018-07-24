@@ -6,11 +6,13 @@ import router from './router'
 // 引入muse-Ui
 import MuseUI from 'muse-ui'
 import 'muse-ui/dist/muse-ui.css'
-
 Vue.use(MuseUI)
 
-Vue.config.productionTip = false
+// 引入axios
+import axios from 'axios';
+Vue.prototype.$http= axios ;
 
+Vue.config.productionTip = false
 /* eslint-disable no-new */
 new Vue({
   el: '#app',

@@ -1,15 +1,15 @@
 <template>
     <div class="login-wrapper">
-        <div class="register-bg"></div>
+        <div class="login-bg"></div>
         <header class="login-header">
             <span>来聊登录</span>
         </header>
 
         <section class="login-from">
             <mu-container class="login-from-input">
-                <mu-text-field v-model="value13" label="UserName" label-float  icon="account_circle"></mu-text-field><br/>
-                <mu-text-field v-model="value14" label="Password" label-float  error-text="" icon="locked"></mu-text-field><br/>
-                <mu-button class="login-btn" color="primary">登录</mu-button>
+                <mu-text-field v-model="username" label="UserName" label-float  icon="account_circle"></mu-text-field><br/>
+                <mu-text-field type="password" v-model="password" label="Password" label-float  :error-text="errorText" icon="locked" ></mu-text-field><br/>
+                <mu-button class="login-btn" color="primary" @click="submitLogin">登录</mu-button>
                 <router-link to="/register" class="login-tologin">没有账号？快去注册</router-link>
             </mu-container>
         </section>
@@ -19,10 +19,36 @@
 <script>
 export default {
   data() {
-    return {};
+    return {
+        username:'',
+        password:'',
+        errorText:''
+    };
+  },
+  methods:{
+      submitLogin:function(){
+        //   loading
+        // 发送请求
+        this.$http.post('/api/userlogin',{
+            username:this.username,
+            password:this.password
+        }).then((data)=>{
+            console.log(data.data);
+            if(data.data.code == 0 ){
+                // this.$router.push('/chat');
+                location.href = '/chat';
+            }
+            if(data.data.code == 1002){
+                this.errorText = data.data.msg;
+            }
+            console.log('login success');
+        }).catch((err)=>{
+            console.log('login error');
+        })
+      }
   },
   mounted() {
-    // this.$el.style.height = documnet.documentElement.clientHeight
+    
   }
 };
 </script>
