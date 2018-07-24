@@ -1,0 +1,74 @@
+<template>
+    <div class="login-wrapper">
+        <div class="register-bg"></div>
+        <header class="login-header">
+            <span>来聊登录</span>
+        </header>
+
+        <section class="login-from">
+            <mu-container class="login-from-input">
+                <mu-text-field v-model="value13" label="UserName" label-float  icon="account_circle"></mu-text-field><br/>
+                <mu-text-field v-model="value14" label="Password" label-float  error-text="" icon="locked"></mu-text-field><br/>
+                <mu-button class="login-btn" color="primary">登录</mu-button>
+                <router-link to="/register" class="login-tologin">没有账号？快去注册</router-link>
+            </mu-container>
+        </section>
+
+    </div>
+</template>
+<script>
+export default {
+  data() {
+    return {};
+  },
+  mounted() {
+    // this.$el.style.height = documnet.documentElement.clientHeight
+  }
+};
+</script>
+
+<style>
+.login-bg{
+    position: absolute;
+    width:100%;
+    height:100%;
+    z-index:-100;
+    background:url(../../assets/bg.jpg);
+    background-repeat: no-repeat;
+    opacity: 0.5;
+}
+.login-wrapper{
+    /* border:1px solid #000; */
+}
+/* 头部 */
+.login-header{
+    padding-top:100px;
+    text-align: center;
+    font-size: 20px;
+    font-weight: 500;
+}
+/* 表单 */
+.login-from{
+    text-align: center;
+    /* border:1px solid red; */
+}
+
+.login-btn{
+    margin-top:30px;
+    width:220px;
+}
+
+/* 去登陆 */
+.login-tologin{
+    display:block;
+    margin:10px auto;
+    width:256px;
+    font-size: 12px; font-weight: 400;
+    text-align: right;
+    cursor: pointer;
+    color:#2196f3;
+}
+.login-tologin:hover{
+    color:#219999;
+}
+</style>
