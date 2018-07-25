@@ -59,7 +59,7 @@ export default {
     width:100%;
     height:100%;
     z-index:-100;
-    background:url(../../assets/bg.jpg);
+    background:url(../../assets/images/bg.jpg);
     background-repeat: no-repeat;
     opacity: 0.5;
 }
