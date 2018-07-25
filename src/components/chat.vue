@@ -1,14 +1,15 @@
 <template>
   <!-- <mu-flex class="flex-wrapper" justify-content="center"> -->
-  <div class="chat-wrapper">
+  <div ref="chat" class="chat-wrapper">
 
     <header class="chat-header">
-      <mu-appbar title="Connect With You"></mu-appbar>
+      hello
+      <!-- <mu-appbar title="Connect With You"></mu-appbar> -->
     </header>
 
     <div class="chat-body">
       <!-- <mu-container class="demo-container is-stripe"> -->
-      <mu-row gutter>
+      <mu-row >
         <mu-col span="3" sm="3" md="3" lg="3" xl="3">
           <div class="grid-cell chat-userlist">
             <mu-list >
@@ -23,6 +24,7 @@
             </mu-list>
           </div>
         </mu-col>
+
         <mu-col span="9" sm="9" md="9" lg="9" xl="9">
           <div class=" chat-showbox">
             <div class="chat-showInfo">
@@ -30,7 +32,7 @@
             </div>
             <div class="chat-inputText">
               <!-- <textarea></textarea> -->
-              <mu-text-field v-model="message" multi-line :rows="4" full-width></mu-text-field><br/>
+              <!-- <mu-text-field v-model="message" multi-line :rows="4" full-width></mu-text-field><br/> -->
             </div>
           </div>
         </mu-col>
@@ -41,7 +43,7 @@
 
     <footer class="chat-footer">
       <!-- <mu-container> -->
-      <mu-bottom-nav>
+      <mu-bottom-nav color="#ea66a6" class="chat-footer-nav">
         <mu-bottom-nav-item title="Recents" icon="restore"></mu-bottom-nav-item>
         <mu-bottom-nav-item title="Favorites" icon="favorite"></mu-bottom-nav-item>
         <mu-bottom-nav-item title="Nearby" icon="location_on"></mu-bottom-nav-item>
@@ -63,7 +65,10 @@
       }
     },
     mounted(){
-      // 请求个人数据
+      // 获得布局视口高度，设置外围高度
+      this.$refs.chat.style.height = document.documentElement.clientHeight + 'px';
+
+      // 请求用户数据
       this.$http.get('/api/chat').then((data)=>{
         this.userInfo  = data.data.data;
       }).catch((err)=>{console.log(err)});
@@ -76,53 +81,74 @@
       that.userlist = data;
       console.log('socket....');
       console.log(this.userlist);
-  });
+    });
+
+
+
     }
   };
 
 </script>
 
 <style>
+*{
+  margin:0;
+  padding:0;
+}
   .chat-wrapper {
-    margin: 0 auto;
-    width:70%;
+    position: relative;
+    /* margin: 0 auto; */
+    width:100%;
+    /* height:600px; */
   }
 
   .chat-header {
-    /* height: 100px; */
-    border: 1px solid #000;
-    /* text-align: center; */
+    height: 8%;
+    width:90%;
+    /* border: 1px solid #000; */
+    position: absolute;
+    top:0px;
   }
-
+  .chat-body{
+    position: absolute;
+    top:8%;
+    width:100%;
+    height:84%;
+    background:#f6f5ec;
+    /* border:1px solid red; */
+  }
   .chat-footer {
-    border: 1px solid #000;
+    /* border: 1px solid #000; */
+    background-color: #f3715c;
+    position: absolute;
+    bottom: 0px;
+    width:100%;
+    height:8%;
   }
-
-  .chat-body {
-    background: #fff;
-    min-height: 400px;
+  .chat-footer-nav{
+    height:100%;
   }
 
   .chat-userlist {
     /* border-right:1px solid #000; */
-    min-height: 400px;
+    /* min-height: 400px; */
   }
 
   .chat-showbox {
-    border-left: 1px solid #000;
+    /* border-left: 1px solid #000; */
     position: relative;
-    min-height: 400px;
+    /* min-height: 400px; */
   }
 
   .chat-showInfo {
-    height: 250px;
+    /* height: 250px; */
   }
 
   .chat-inputText {
-    position: absolute;
+    /* position: absolute;
     bottom: 0px;
-    width: 100%;
-    border-top: 1px solid #000;
+    width: 100%; */
+    /* border-top: 1px solid #000; */
   }
   @media screen and (max-width:750px) {
     .chat-wrapper{
