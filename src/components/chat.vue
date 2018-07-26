@@ -59,16 +59,31 @@
                   <span class="msg-user">{{item.sender}}</span>
                   <span class="msg-time">{{item.time}}</span>
                 </div>
-                <div class="msg-text">
-                  <span>{{item.message}}</span>
+
+                <div  class="msg-text">
+                    <span>{{item.message}}</span>
                 </div>
-             </div>
+
+                <div  v-if="!!item.picture" class="msg-img">
+                    <img :src="item.picture" alt="">
+                  </div>
+                </div>
+             
             </section>
             <!-- 输入框 -->
-            <section class="chat-dialog-inputbox">
-              <mu-text-field class="chat-dialog-input"  v-model="messageText" placeholder="请输入文字"></mu-text-field>
-               <mu-button class="chat-dialog-sendbtn"   small  color="primary" @click="sendMsg">发送</mu-button>
-            </section>
+             <mu-row gutter class="chat-dialog-inputbox">
+              <mu-col span="8"><mu-text-field class="chat-dialog-input"  v-model="messageText" placeholder="请输入文字"></mu-text-field></mu-col>
+              <!-- <mu-col span="2"><mu-button class="chat-dialog-sendbtn"   small  color="primary" @click="sendMsg">发送</mu-button></mu-col> -->
+               <mu-col span="2"><div class="chat-dialog-sendbtn"  @click="sendMsg">发送</div></mu-col>
+               <mu-col span="2"><div class="chat-dialog-sendbtn" >
+                 <input type="file" multiple accept="image/*" @change="uploadImg" >
+                </div></mu-col>
+              
+            </mu-row>
+            <!-- <section class="chat-dialog-inputbox">
+              
+               
+            </section> -->
           </div>
         </mu-dialog>
       </mu-row>
@@ -105,12 +120,33 @@ export default {
       // 保存消息的列表
       messageList: [],
       // 新消息列表
-      newMessageList:[],
+      newMessageList: [],
       // 历史消息列表
-      historyMessageList:[]
+      historyMessageList: [],
+      picture: ""
     };
   },
   methods: {
+    // 上传图片
+    uploadImg(event) {
+      // 新建读取文件的对象
+      let reader = new FileReader();
+      // 获得图片
+      let file = event.target.files[0];
+      let that = this;
+      console.log("file");
+      console.log(file);
+      console.log(file.size);
+      console.log(file.type);
+      // 使用reader读取file
+      reader.readAsDataURL(file);
+      // 读取完成后，在result中获取base64编码
+
+      reader.onload = function() {
+        that.picture = this.result;
+        that.sendMsg();
+      };
+    },
     // 打开对话框
     openFullscreenDialog(item) {
       this.openFullscreen = true;
@@ -119,22 +155,25 @@ export default {
       this.getHistoryMessage(item);
     },
     // 获取历史消息
-    getHistoryMessage(item){
+    getHistoryMessage(item) {
       // 检查当前用户是否有本地存储
       let that = this;
       let username = that.userInfo.username;
       let peer = that.talkManInfo.username;
       // 发送请求
-      this.$http.get('/api/gethistory?username='+username+'&peer='+peer).then(data=>{
-        console.log(data);
-        let historymessage = data.data.data;
-        // 存放在历史消息列表
-        that.messageList.push.apply( that.messageList, historymessage );
-        // that.messageList.concat(historymessage);
-        console.log(historymessage);
-      }).catch(err=>{
-        console.log(err);
-      })
+      this.$http
+        .get("/api/gethistory?username=" + username + "&peer=" + peer)
+        .then(data => {
+          console.log(data);
+          let historymessage = data.data.data;
+          // 存放在历史消息列表
+          that.messageList.push.apply(that.messageList, historymessage);
+          // that.messageList.concat(historymessage);
+          console.log(historymessage);
+        })
+        .catch(err => {
+          console.log(err);
+        });
     },
     closeFullscreenDialog() {
       this.openFullscreen = false;
@@ -175,27 +214,29 @@ export default {
 
       let data = {
         from: that.userInfo.username,
-        to:that.talkManInfo.username,
+        to: that.talkManInfo.username,
         socketid: that.talkManInfo.socketid,
         message: that.messageText,
+        picture: that.picture || null,
         time: time.toLocaleString(),
         type: 1
       };
 
-      
       // 发送消息到服务器
       socket.emit("send private message", data);
 
       let mydate = {
         sender: that.userInfo.username,
         message: that.messageText,
+        picture:that.picture || null,
         time: time.toLocaleString()
       };
       // 添加到消息列表中
       that.messageList.push(mydate);
 
-      // 清空输入框
+      // 清空输入框和图片
       this.messageText = "";
+      this.picture = null;
     }
   },
   mounted() {
@@ -213,7 +254,6 @@ export default {
       .catch(err => {
         console.log(err);
       });
-
 
     // 使用localstorge存储
     // var storage = window.localStorage;
@@ -240,22 +280,33 @@ export default {
     // arr.push(data2);
     // arr = JSON.stringify(arr);
     // storage.setItem('xxx',arr);
-    
+
     // var d = storage.getItem('xxx');
     // console.log(JSON.parse(d)[0]);
   }
-
 };
 </script>
 
 <style>
+.msg-img {
+  width: 50%;
+  height: 50%;
+  padding: 5px;
+  /* border:1px solid #000; */
+  /* border-radius: 10px; */
+}
+.msg-img img {
+  width: 100%;
+  height: 100%;
+  border-radius: 10px;
+}
 .msg-container {
   /* border:1px solid rgb(196, 196, 196); */
   box-shadow: 1px 1px 5px #ccc;
   border-radius: 10px;
   padding: 10px;
   margin: 10px;
-  background-color: #ffeed0;
+  background-color: #d0f3e0;
 }
 .chat-sub-header {
   margin: 5px;
@@ -267,9 +318,19 @@ export default {
   background: rgb(116, 172, 218);
 }
 .chat-dialog-input {
-  width: 70%;
+  padding-left: 10px;
+  width: 100%;
 }
 .chat-dialog-sendbtn {
+  margin-left: 10px;
+  margin-top: 10px;
+  background-color: #2196f3;
+  border-radius: 5px;
+  color: #fff;
+  width: 100%;
+  text-align: center;
+  /* border: 1px solid red; */
+  /* text-align: center; */
   /* background:red; */
 }
 .mu-dialog-body {
