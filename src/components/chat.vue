@@ -53,28 +53,30 @@
                 <!-- 选项框 -->
                 <ul class="msg-select" v-show="item.showSelect" >
                   <li @click="quoteMessage(item)">文本引用</li>
-                  <li v-if="!(userInfo.username == item.sender)&&item.showrecall" @click="recallMessage(item,index)">撤销</li>
+                  <li v-if="item.showrecall&&((item.sender != talkManInfo.username))" @click="recallMessage(item,index)">撤回</li>
+                  <li v-if="item.showrecall&&((item.sender != talkManInfo.username))" @click="recallMessage(item,index)">修改</li>
                 </ul>
-
                 <!-- 最新消息框 -->
                 <div class="msg-divider" v-if="item.isNewMsg">以下是最新消息</div>
 
                 <section v-if="item.isrecall== undefined || !item.isrecall" class="msg-msgbox" @mousedown="gtouchstart(item)" @mousemove="gtouchmove()" @mouseup="gtouchend(item)" @touchstart="gtouchstart(item)" @touchmove="gtouchmove()" @touchend="gtouchend(item)">
-        
-                  <div class="msg-title">
-                    <span class="msg-user">{{item.sender}}</span>
-                    <span class="msg-time">{{item.timeText}}</span>
+                <div class="msg-time">{{item.timeText}}</div>
+                  
+                  <div class="msg-avatar">
                   </div>
                   
                   <div class="msg-text">
                     <span>{{item.message}}</span>
+                    <div v-if="!!item.picture" class="msg-img" @click="openPictureFn(item)">
+                    <img :src="item.picture" alt="">
+                    </div>
                   </div>
                  
-                  <div v-if="!!item.picture" class="msg-img" @click="openPictureFn(item)">
-                    <img :src="item.picture" alt="">
-                  </div>
+                  
 
                 </section>
+
+                
                 <!-- 撤回消息框 -->
                 <div class="msg-recall-msg" v-if="item.isrecall">{{item.sender+item.message}}</div>
                 <!-- 放大图片 -->
@@ -197,6 +199,8 @@ export default {
         var now_new = now.getTime();
         if((now_new - item.time ) <= 1000 * 60 * 1){
             item.showrecall = true;
+        }else{
+          item.showrecall = false;
         }
         // 显示选项框
         item.showSelect = true;
@@ -586,22 +590,62 @@ export default {
   background: rgb(212, 212, 211);
 }
 .msg-time{
+  width:20%;
+  margin: 0 auto;
+  margin-bottom:10px;
+  background:#2196f3;
+  border-radius: 5px;
   font-size:12px;
+  text-align:center;
+  color:#fff;
+
 }
 .msg-msgbox {
-  margin-top: 10px;
-  background-color: #eeeeee;
-  padding: 10px;
-  width: 80%;
-  border-radius: 5px;
-  box-shadow: 1px 1px 5px rgb(167, 166, 166);
+  margin-top: 5px;
+  /* background-color: #eeeeee; */
+  padding: 5px;
+  width: 100%;
+  /* border-radius: 5px; */
+  /* box-shadow: 1px 1px 5px rgb(167, 166, 166); */
   word-wrap: break-word;
+}
+.msg-avatar{
+  display:inline-block;
+  width:40px;
+  height: 40px;
+  border-radius: 50px;
+  vertical-align: middle;
+  border:1px solid #000;
+}
+/* 消息内容框 */
+.msg-text{
+  position: relative;
+  padding:8px;
+  margin-left:10px;
+  vertical-align: middle;
+  display:inline-block;
+  /* border:1px solid red; */
+  border-radius: 5px;
+  box-shadow: 1px 1px 5px #ccc;
+  background:#eee;
+  height:100%;
+  /* width:50%; */
+}
+.msg-text:after{
+  content: '';
+  position: absolute;
+  top:10px;
+  left:-16px;
+  display: block;
+  border-width:8px;
+  border-style: solid;
+  border-color:transparent #eee transparent transparent;
 }
 
 .msg-container {
   position: relative;
-  padding: 10px;
-  margin: 10px;
+  padding: 5px;
+  margin: 5px 10px;
 }
 
 .chat-sub-header {
