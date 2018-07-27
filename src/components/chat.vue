@@ -48,33 +48,35 @@
 
             <!-- 消息框 -->
             <section class="chat-dialog-msgbox" ref="msgbox">
-              <div class="msg-container" v-for="item in messageList">
+              <div class="msg-container" v-for="(item,index) in messageList">
                 
                 <!-- 选项框 -->
                 <ul class="msg-select" v-show="item.showSelect" >
                   <li @click="quoteMessage(item)">文本引用</li>
-                  <li>撤销</li>
+                  <li v-if="!(userInfo.username == item.sender)&&item.showrecall" @click="recallMessage(item,index)">撤销</li>
                 </ul>
 
                 <!-- 最新消息框 -->
                 <div class="msg-divider" v-if="item.isNewMsg">以下是最新消息</div>
 
-                <section class="msg-msgbox" @mousedown="gtouchstart(item)" @mousemove="gtouchmove()" @mouseup="gtouchend(item)" @touchstart="gtouchstart(item)" @touchmove="gtouchmove()" @touchend="gtouchend(item)">
-                  <!-- 用户名 -->
+                <section v-if="item.isrecall== undefined || !item.isrecall" class="msg-msgbox" @mousedown="gtouchstart(item)" @mousemove="gtouchmove()" @mouseup="gtouchend(item)" @touchstart="gtouchstart(item)" @touchmove="gtouchmove()" @touchend="gtouchend(item)">
+        
                   <div class="msg-title">
                     <span class="msg-user">{{item.sender}}</span>
-                    <span class="msg-time">{{item.time}}</span>
+                    <span class="msg-time">{{item.timeText}}</span>
                   </div>
-                  <!-- 消息 -->
+                  
                   <div class="msg-text">
                     <span>{{item.message}}</span>
                   </div>
-                  <!-- 图片 -->
+                 
                   <div v-if="!!item.picture" class="msg-img" @click="openPictureFn(item)">
                     <img :src="item.picture" alt="">
                   </div>
-                </section>
 
+                </section>
+                <!-- 撤回消息框 -->
+                <div class="msg-recall-msg" v-if="item.isrecall">{{item.sender+item.message}}</div>
                 <!-- 放大图片 -->
                   <mu-dialog class="msg-pic-dialog" :open.sync="openPicture" @click="closePictureFn">
                     <img :src="item.picture" alt="">
@@ -147,6 +149,40 @@ export default {
     };
   },
   methods: {
+    // 撤回消息
+    recallMessage(item,index){
+      console.log('撤销');
+      console.log(item);
+      let recallMsg = {
+        from: this.userInfo.username,
+        to: this.talkManInfo.username,
+        socketid: this.talkManInfo.socketid,
+        message: item.message,
+        picture: item.picture || null,
+        time: item.time,
+        type:2
+      };
+      let new_time = new Date();
+      let localMsg = {
+            sender: this.userInfo.username,
+            time: new_time.getTime(),
+            message: '撤回一条消息',
+            isrecall:true
+      }
+      // 连接ws
+      let socket = io.connect("ws://localhost:8000/");
+      
+      // 告诉对方删除的消息是什么
+      socket.emit('recall message',recallMsg);
+      // 删除本地该条消息
+      this.messageList.splice(index,1);
+      // 如果是本地自己
+      if(this.userInfo.username == item.sender){
+        // 添加一条消息
+        this.messageList.push(localMsg);
+        console.log(this.messageList);
+      }
+    },
     // 引用文本
     quoteMessage(item){
       item.showSelect = false;
@@ -157,6 +193,11 @@ export default {
       item.showSelect = false;
       this.timeOutEvent = setTimeout(function() {
         console.log("长按触发" + item.message);
+        var now = new Date();
+        var now_new = now.getTime();
+        if((now_new - item.time ) <= 1000 * 60 * 1){
+            item.showrecall = true;
+        }
         // 显示选项框
         item.showSelect = true;
         this.timeOutEvent = 0;
@@ -246,7 +287,8 @@ export default {
     handleMessage(messageList){
       messageList.map((item)=>{
         item.showSelect = false;
-        item.time = setTime(item.time);
+        item.showrecall = false;
+        item.timeText = setTime(item.time);
       })
     },
     closeFullscreenDialog() {
@@ -281,11 +323,41 @@ export default {
         // 消息计数
         that.msgCounter(sender);
         data.showSelect = false;
-        data.time = setTime(data.time);
+        data.showrecall = false;
+        data.timeText = setTime(data.time);
         that.messageList.push(data);
 
         // 滚动到最后
         that.msgScroll();
+      });
+
+      // 接收撤回数据
+      socket.on('recall message',function(data){
+        console.log('接受消息recall');
+        console.log(data);
+        let new_time = new Date();
+        let localMsg = {
+            sender: data.from,
+            time: new_time.getTime(),
+            message: '撤回一条消息',
+            isrecall:true
+        }
+        // 如果聊天是自己与自己 不操作下面
+        if(data.from == data.to){
+          return;
+        }
+        // 删除数据遍历查找该条数据
+        that.messageList.forEach((msgitem,index)=>{
+          console.log('遍历');
+          console.log(msgitem);
+          if(msgitem.time == data.time){
+            // 找到对应项删除
+            that.messageList.splice(index,1);
+          }
+        })
+        // 拿到数据添加到消息队列
+        that.messageList.push(localMsg);
+
       });
     },
     // 设置某条消息后为最新消息
@@ -338,17 +410,21 @@ export default {
 
       // 发送消息到服务器
       socket.emit("send private message", data);
-      let mydate = {
+
+      let mydata = {
         sender: that.userInfo.username,
         message: that.messageText,
         picture: that.picture || null,
-        time: setTime(time),
-        showSelect:false
+        time: time.getTime(),
+        timeText:setTime(time),
+        showSelect:false,
+        showrecall:false
       };
-      // 如果对话方不是自己 添加消息
+      // 如果不是发给自己 添加消息
       if (data.from != data.to) {
+
         // 添加到消息列表中
-        that.messageList.push(mydate);
+        that.messageList.push(mydata);
       }
       this.msgScroll();
       // 清空输入框和图片
@@ -369,7 +445,7 @@ export default {
     // 获得布局视口高度，设置外围高度
     this.$refs.chat.style.height = document.documentElement.clientHeight + "px";
     // this.$refs.dialog.style.height = document.documentElement.clientHeight + "px";
-    console.log(setTime(1532162822686));
+    // console.log(setTime(1532162822686));
     // setTime(1532662852686);
     // 请求用户数据
     this.$http
@@ -415,7 +491,25 @@ export default {
 </script>
 
 <style>
-
+/* 撤回消息框 */
+.msg-recall-msg{
+  position: absolute;
+  background-color: #b1afaf;
+  /* padding: 10px; */
+  margin-left:-25%;
+  /* margin-top:-25%; */
+  left:50%;
+  top:50%;
+  text-align: center;
+  width: 50%;
+  height:20px;
+  font-size:14px;
+  line-height: 20px;
+  border-radius: 5px;
+  box-shadow: 1px 1px 5px rgb(167, 166, 166);
+  word-wrap: break-word;
+  color:#fff;
+}
 /* 长按消息弹出框样式 */
 .msg-select{
   position:absolute;
