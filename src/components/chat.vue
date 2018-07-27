@@ -49,14 +49,23 @@
             <!-- 消息框 -->
             <section class="chat-dialog-msgbox" ref="msgbox">
               <div class="msg-container" v-for="item in messageList">
+                
+                <!-- 选项框 -->
+                <ul class="msg-select" v-show="item.showSelect" >
+                  <li @click="quoteMessage(item)">文本引用</li>
+                  <li>撤销</li>
+                </ul>
+
+                <!-- 最新消息框 -->
                 <div class="msg-divider" v-if="item.isNewMsg">以下是最新消息</div>
-                <section class="msg-msgbox">
+
+                <section class="msg-msgbox" @mousedown="gtouchstart(item)" @mousemove="gtouchmove()" @mouseup="gtouchend(item)" @touchstart="gtouchstart(item)" @touchmove="gtouchmove()" @touchend="gtouchend(item)">
+                  <!-- 用户名 -->
                   <div class="msg-title">
                     <span class="msg-user">{{item.sender}}</span>
                     <span class="msg-time">{{item.time}}</span>
-
                   </div>
-
+                  <!-- 消息 -->
                   <div class="msg-text">
                     <span>{{item.message}}</span>
                   </div>
@@ -64,8 +73,6 @@
                   <div v-if="!!item.picture" class="msg-img" @click="openPictureFn(item)">
                     <img :src="item.picture" alt="">
                   </div>
-                  
-
                 </section>
 
                 <!-- 放大图片 -->
@@ -110,496 +117,561 @@
   <!-- </mu-flex> -->
 </template>
 <script>
-  import io from "socket.io-client";
-  import Toast from "muse-ui-toast";
+import io from "socket.io-client";
+import Toast from "muse-ui-toast";
+import setTime from "../ulit/setTime.js"
+export default {
+  data() {
+    return {
+      // 当前用户信息
+      userInfo: {},
+      // 在线用户列表
+      userlist: [],
+      openFullscreen: false,
+      messageText: "",
+      // 当前聊天的用户信息
+      talkManInfo: {},
+      // 保存消息的列表
+      messageList: [],
+      // 新消息列表
+      newMessageList: [],
+      // 历史消息列表
+      historyMessageList: [],
+      picture: null,
+      // 消息计数数组
+      msgCount: {},
+      // 放大图片框
+      openPicture: false,
+      openPictureData: "",
+      timeOutEvent: 0
+    };
+  },
+  methods: {
+    // 引用文本
+    quoteMessage(item){
+      item.showSelect = false;
+      this.messageText = item.message;
+    },
+    // 消息框长按显示
+    gtouchstart(item) {
+      item.showSelect = false;
+      this.timeOutEvent = setTimeout(function() {
+        console.log("长按触发" + item.message);
+        // 显示选项框
+        item.showSelect = true;
+        this.timeOutEvent = 0;
+      }, 500); //这里设置定时器，定义长按500毫秒触发长按事件
+      return false;
+    },
+    // 规定时间离开就清除计时器
+    gtouchmove() {
+      clearTimeout(this.timeOutEvent);
+      this.timeOutEvent = 0;
+      return false;
+    },
+    //手释放，如果在500毫秒内就释放，则取消长按事件，此时可以执行onclick应该执行的事件
+    gtouchend(item) {
+      clearTimeout(this.timeOutEvent); //清除定时器
+      return false;
+    },
+    // 消息框中放大图片
+    openPictureFn(item) {
+      this.openPicture = true;
+      this.openPictureData = item.picture;
+    },
+    closePictureFn() {
+      this.openPicture = false;
+      this.openPictureData = "";
+    },
+    // 上传图片
+    uploadImg(event) {
+      // 新建读取文件的对象
+      let reader = new FileReader();
+      // 获得图片
+      let file = event.target.files[0];
+      let that = this;
+      console.log("file");
+      console.log(file);
+      console.log(file.size);
+      console.log(file.type);
+      // 使用reader读取file
+      reader.readAsDataURL(file);
+      // 读取完成后，在result中获取base64编码
 
-  export default {
-    data() {
-      return {
-        // 当前用户信息
-        userInfo: {},
-        // 在线用户列表
-        userlist: [],
-        openFullscreen: false,
-        messageText: "",
-        // 当前聊天的用户信息
-        talkManInfo: {},
-        // 保存消息的列表
-        messageList: [],
-        // 新消息列表
-        newMessageList: [],
-        // 历史消息列表
-        historyMessageList: [],
-        picture: null,
-        // 消息计数数组
-        msgCount: {},
-        // 放大图片框
-        openPicture:false,
-        openPictureData:''
+      reader.onload = function() {
+        that.picture = this.result;
+        that.sendMsg();
       };
     },
-    methods: {
-      // 消息框中放大图片
-      openPictureFn(item){
-        this.openPicture  = true;
-        this.openPictureData = item.picture;
-      },
-      closePictureFn(){
-        this.openPicture = false;
-        this.openPictureData = '';
-      },
-      // 上传图片
-      uploadImg(event) {
-        // 新建读取文件的对象
-        let reader = new FileReader();
-        // 获得图片
-        let file = event.target.files[0];
-        let that = this;
-        console.log("file");
-        console.log(file);
-        console.log(file.size);
-        console.log(file.type);
-        // 使用reader读取file
-        reader.readAsDataURL(file);
-        // 读取完成后，在result中获取base64编码
-
-        reader.onload = function () {
-          that.picture = this.result;
-          that.sendMsg();
-        };
-      },
-      // 打开对话框
-      openFullscreenDialog(item) {
-        this.openFullscreen = true;
-        // 获取对话用户信息
-        this.talkManInfo = item;
-        // 请求历史记录
-        this.getHistoryMessage(item);
-
-      },
-      // 获取历史消息
-      getHistoryMessage(item) {
-        // 清除聊天信息
-        this.messageList.length = 0;
-        // 检查当前用户是否有本地存储
-        let that = this;
-        let username = that.userInfo.username;
-        let peer = that.talkManInfo.username;
-        // 发送请求
-        this.$http
-          .get("/api/gethistory?username=" + username + "&peer=" + peer)
-          .then(data => {
-            console.log(data);
-            let historymessage = data.data.data;
-            // 存放在历史消息列表
-            that.messageList.push.apply(that.messageList, historymessage);
-            // that.messageList.concat(historymessage);
-            // console.log(historymessage);
-            // 滚动到最下面
-            that.msgScroll();
-            // 设置最新消息分界
-            that.setIsNewflag(that.messageList, peer);
-          })
-          .catch(err => {
-            console.log(err);
-          });
-      },
-      closeFullscreenDialog() {
-        this.openFullscreen = false;
-        // 消除消息提示
-        this.msgCount[this.talkManInfo.username] = 0;
-        // 清除聊天人信息
-        this.talkManInfo = {};
-        // 清除聊天信息
-        this.messageList.length = 0;
-
-      },
-
-      websocketFun() {
-        // 连接ws
-        let socket = io.connect("ws://localhost:8000/");
-        //   接受广播的消息例子 登录用户显示
-        let that = this;
-        // 发送消息增加一个用户
-        socket.emit("new user", that.userInfo);
-
-        // 接受广播
-        socket.on("broadcast message all", function (data) {
-          that.userlist = data;
-          console.log("socket....");
-          console.log(that.userlist);
-        });
-
-        // 接收私人消息
-        socket.on("receive private meassge", function (data) {
-          console.log('接收数据');
-          let sender = data.sender;
-          // 消息计数
-          that.msgCounter(sender);
-          console.log(that.msgCount[sender]);
-          that.messageList.push(data);
-
-          // 滚动到最后
-          that.msgScroll();
-        });
-      },
-      // 设置某条消息后为最新消息
-      setIsNewflag(msglist, sender) {
-        let count = this.msgCount[sender];
-        if (count != undefined && count > 0) {
-          console.log('新消息');
-          console.log(msglist);
-          let flat = msglist.length - count;
-          console.log(msglist[flat]);
-          msglist[flat].isNewMsg = true;
-        }
-      },
-      msgCounter(sender) {
-        // console.log(this.msgCount);
-        // this.msgCount[sender] = 1;
-        // 如果不存在这个属性，创建并赋值1
-        if (this.msgCount[sender] == undefined) {
-          this.msgCount[sender] = 1;
-        } else {
-          this.msgCount[sender]++;
-        }
-        // console.log('计数');
-        console.log(this.msgCount);
-      },
-      // 发送我的消息
-      sendMsg() {
-        if (this.messageText.trim().length == 0 && this.picture == null) {
-          Toast.config({
-            position: "top"
-          });
-          Toast.warning("消息不能为空!");
-          return;
-        }
-
-        // 连接ws
-        let socket = io.connect("ws://localhost:8000/");
-        let that = this;
-        let time = new Date();
-
-        let data = {
-          from: that.userInfo.username,
-          to: that.talkManInfo.username,
-          socketid: that.talkManInfo.socketid,
-          message: that.messageText,
-          picture: that.picture || null,
-          time: time.toLocaleString(),
-          type: 1
-        };
-
-        // 发送消息到服务器
-        socket.emit("send private message", data);
-        let mydate = {
-          sender: that.userInfo.username,
-          message: that.messageText,
-          picture: that.picture || null,
-          time: time.toLocaleString()
-        };
-        // 如果对话方不是自己添加消息
-        if (data.from != data.to) {
-          // 添加到消息列表中
-          that.messageList.push(mydate);
-        }
-        this.msgScroll();
-        // 清空输入框和图片
-        this.messageText = "";
-        this.picture = null;
-      },
-      // 消息滚动
-      msgScroll() {
-        let msgbox = this.$refs.msgbox;
-        if (msgbox != undefined) {
-          setTimeout(() => {
-            msgbox.scrollTop = Number.MAX_SAFE_INTEGER;
-          }, 500);
-        }
-      }
+    // 打开对话框
+    openFullscreenDialog(item) {
+      this.openFullscreen = true;
+      // 获取对话用户信息
+      this.talkManInfo = item;
+      // 请求历史记录
+      this.getHistoryMessage(item);
     },
-    mounted() {
-      // 获得布局视口高度，设置外围高度
-      this.$refs.chat.style.height = document.documentElement.clientHeight + "px";
-      // this.$refs.dialog.style.height = document.documentElement.clientHeight + "px";
-
-      // 请求用户数据
+    // 获取历史消息
+    getHistoryMessage(item) {
+      // 清除聊天信息
+      this.messageList.length = 0;
+      // 检查当前用户是否有本地存储
+      let that = this;
+      let username = that.userInfo.username;
+      let peer = that.talkManInfo.username;
+      // 发送请求
       this.$http
-        .get("/api/chat")
+        .get("/api/gethistory?username=" + username + "&peer=" + peer)
         .then(data => {
-          this.userInfo = data.data.data;
-          this.websocketFun();
+          console.log(data);
+          let historymessage = data.data.data;
+
+           // 处理messageList
+          that.handleMessage(historymessage);
+          // 存放在历史消息列表
+          that.messageList.push.apply(that.messageList, historymessage);
+          // that.messageList.concat(historymessage);
+          // console.log(historymessage);
+         
+          // 滚动到最下面
+          that.msgScroll();
+          // 设置最新消息分界
+          that.setIsNewflag(that.messageList, peer);
         })
         .catch(err => {
           console.log(err);
         });
+    },
+    // 处理数据
+    handleMessage(messageList){
+      messageList.map((item)=>{
+        item.showSelect = false;
+        item.time = setTime(item.time);
+      })
+    },
+    closeFullscreenDialog() {
+      this.openFullscreen = false;
+      // 消除消息提示
+      this.msgCount[this.talkManInfo.username] = 0;
+      // 清除聊天人信息
+      this.talkManInfo = {};
+      // 清除聊天信息
+      this.messageList.length = 0;
+    },
 
-      // 使用localstorge存储
-      // var storage = window.localStorage;
-      // var data1 = {
-      //     peer: "22",
-      //     msg: [
-      //       {
-      //         msg: "xx",
-      //         time: "ddd"
-      //       }
-      //     ]
-      //   };
-      //   var data2 = {
-      //     peer: "23",
-      //     msg: [
-      //       {
-      //         msg: "xx",
-      //         time: "ddd"
-      //       }
-      //     ]
-      //   };
-      // var arr = [];
-      // arr.push(data1);
-      // arr.push(data2);
-      // arr = JSON.stringify(arr);
-      // storage.setItem('xxx',arr);
+    websocketFun() {
+      // 连接ws
+      let socket = io.connect("ws://localhost:8000/");
+      //   接受广播的消息例子 登录用户显示
+      let that = this;
+      // 发送消息增加一个用户
+      socket.emit("new user", that.userInfo);
 
-      // var d = storage.getItem('xxx');
-      // console.log(JSON.parse(d)[0]);
+      // 接受广播
+      socket.on("broadcast message all", function(data) {
+        that.userlist = data;
+        console.log("socket....");
+        console.log(that.userlist);
+      });
+
+      // 接收私人消息
+      socket.on("receive private meassge", function(data) {
+        console.log("接收数据");
+        let sender = data.sender;
+        // 消息计数
+        that.msgCounter(sender);
+        data.showSelect = false;
+        data.time = setTime(data.time);
+        that.messageList.push(data);
+
+        // 滚动到最后
+        that.msgScroll();
+      });
+    },
+    // 设置某条消息后为最新消息
+    setIsNewflag(msglist, sender) {
+      let count = this.msgCount[sender];
+      if (count != undefined && count > 0) {
+        console.log("新消息");
+        console.log(msglist);
+        let flat = msglist.length - count;
+        console.log(msglist[flat]);
+        msglist[flat].isNewMsg = true;
+      }
+    },
+    msgCounter(sender) {
+      // console.log(this.msgCount);
+      // this.msgCount[sender] = 1;
+      // 如果不存在这个属性，创建并赋值1
+      if (this.msgCount[sender] == undefined) {
+        this.msgCount[sender] = 1;
+      } else {
+        this.msgCount[sender]++;
+      }
+      // console.log('计数');
+      console.log(this.msgCount);
+    },
+    // 发送我的消息
+    sendMsg() {
+      if (this.messageText.trim().length == 0 && this.picture == null) {
+        Toast.config({
+          position: "top"
+        });
+        Toast.warning("消息不能为空!");
+        return;
+      }
+
+      // 连接ws
+      let socket = io.connect("ws://localhost:8000/");
+      let that = this;
+      let time = new Date();
+
+      let data = {
+        from: that.userInfo.username,
+        to: that.talkManInfo.username,
+        socketid: that.talkManInfo.socketid,
+        message: that.messageText,
+        picture: that.picture || null,
+        time: time.getTime(),
+        type: 1
+      };
+
+      // 发送消息到服务器
+      socket.emit("send private message", data);
+      let mydate = {
+        sender: that.userInfo.username,
+        message: that.messageText,
+        picture: that.picture || null,
+        time: setTime(time),
+        showSelect:false
+      };
+      // 如果对话方不是自己 添加消息
+      if (data.from != data.to) {
+        // 添加到消息列表中
+        that.messageList.push(mydate);
+      }
+      this.msgScroll();
+      // 清空输入框和图片
+      this.messageText = "";
+      this.picture = null;
+    },
+    // 消息滚动
+    msgScroll() {
+      let msgbox = this.$refs.msgbox;
+      if (msgbox != undefined) {
+        setTimeout(() => {
+          msgbox.scrollTop = Number.MAX_SAFE_INTEGER;
+        }, 500);
+      }
     }
-  };
+  },
+  mounted() {
+    // 获得布局视口高度，设置外围高度
+    this.$refs.chat.style.height = document.documentElement.clientHeight + "px";
+    // this.$refs.dialog.style.height = document.documentElement.clientHeight + "px";
+    console.log(setTime(1532162822686));
+    // setTime(1532662852686);
+    // 请求用户数据
+    this.$http
+      .get("/api/chat")
+      .then(data => {
+        this.userInfo = data.data.data;
+        this.websocketFun();
+      })
+      .catch(err => {
+        console.log(err);
+      });
 
+    // 使用localstorge存储
+    // var storage = window.localStorage;
+    // var data1 = {
+    //     peer: "22",
+    //     msg: [
+    //       {
+    //         msg: "xx",
+    //         time: "ddd"
+    //       }
+    //     ]
+    //   };
+    //   var data2 = {
+    //     peer: "23",
+    //     msg: [
+    //       {
+    //         msg: "xx",
+    //         time: "ddd"
+    //       }
+    //     ]
+    //   };
+    // var arr = [];
+    // arr.push(data1);
+    // arr.push(data2);
+    // arr = JSON.stringify(arr);
+    // storage.setItem('xxx',arr);
+
+    // var d = storage.getItem('xxx');
+    // console.log(JSON.parse(d)[0]);
+  }
+};
 </script>
 
 <style>
-  .msg-img {
-    width: 50%;
-    height: 50%;
-    padding: 5px;
-    /* border:1px solid #000; */
-    /* border-radius: 10px; */
-  }
 
-  .msg-img img {
-    width: 100%;
-    height: 100%;
-    border-radius: 10px;
-  }
+/* 长按消息弹出框样式 */
+.msg-select{
+  position:absolute;
+  padding:0px;
+  top:-30px;
+  overflow: hidden;
+  border:1px solid #fff;
+  border-radius: 5px;
+  background:rgb(63, 61, 61);
+  height: 30px;
+  font-size: 14px;
+  color:#fff;
+  line-height: 30px;
+  text-align: center;
+  
+}
+.msg-select li{
+  padding:0px 10px;
+  display: inline-block;
+  list-style: none;
+  text-align: center;
+}
+.msg-select li:not(:last-child){
+  border-right:1px solid #fff;  
+}
+.msg-pic-dialog {
+  width: 100%;
+}
+.msg-pic-dialog img {
+  width: 100%;
+}
+.msg-img {
+  width: 50%;
+  height: 50%;
+  padding: 5px;
+  /* border:1px solid #000; */
+  /* border-radius: 10px; */
+}
 
-  .msg-divider {
-    width: 100%;
-    height: 20px;
-    position: relative;
-    text-align: center;
-    color: rgb(117, 117, 117);
-    font-weight: 100;
-    font-size: 12px;
-  }
+.msg-img img {
+  width: 100%;
+  height: 100%;
+  border-radius: 10px;
+}
 
-  .msg-divider::after {
-    display: block;
-    position: absolute;
-    top: 9px;
-    content: '';
-    width: 35%;
-    height: 1px;
-    background: rgb(212, 212, 211);
-  }
+.msg-divider {
+  width: 100%;
+  height: 20px;
+  position: relative;
+  text-align: center;
+  color: rgb(117, 117, 117);
+  font-weight: 100;
+  font-size: 12px;
+}
 
-  .msg-divider::before {
-    display: block;
-    position: absolute;
-    top: 9px;
-    right: 0;
-    content: '';
-    width: 35%;
-    height: 1px;
-    background: rgb(212, 212, 211);
-  }
+.msg-divider::after {
+  display: block;
+  position: absolute;
+  top: 9px;
+  content: "";
+  width: 35%;
+  height: 1px;
+  background: rgb(212, 212, 211);
+}
 
-  .msg-msgbox {
-    margin-top: 10px;
-    background-color: #eeeeee;
-    padding: 10px;
-    width: 80%;
-    border-radius: 5px;
-    box-shadow: 1px 1px 5px rgb(167, 166, 166);
-    word-wrap: break-word;
-  }
+.msg-divider::before {
+  display: block;
+  position: absolute;
+  top: 9px;
+  right: 0;
+  content: "";
+  width: 35%;
+  height: 1px;
+  background: rgb(212, 212, 211);
+}
+.msg-time{
+  font-size:12px;
+}
+.msg-msgbox {
+  margin-top: 10px;
+  background-color: #eeeeee;
+  padding: 10px;
+  width: 80%;
+  border-radius: 5px;
+  box-shadow: 1px 1px 5px rgb(167, 166, 166);
+  word-wrap: break-word;
+}
 
-  .msg-container {
-    /* border:1px solid rgb(196, 196, 196); */
-    /* box-shadow: 1px 1px 5px #ccc; */
-    /* border-radius: 10px; */
-    padding: 10px;
-    margin: 10px;
-    /* background-color: #d0f3e0; */
-  }
+.msg-container {
+  position: relative;
+  padding: 10px;
+  margin: 10px;
+}
 
-  .chat-sub-header {
-    margin: 5px;
-    height: 20px;
-    font-size: 16px;
-  }
+.chat-sub-header {
+  margin: 5px;
+  height: 20px;
+  font-size: 16px;
+}
 
-  .chat-list-item {
-    margin: 5px;
-    border: 1px solid #fff;
-    border-radius: 10px;
-    background: rgb(228, 231, 233);
-  }
+.chat-list-item {
+  margin: 5px;
+  border: 1px solid #fff;
+  border-radius: 10px;
+  background: rgb(228, 231, 233);
+}
 
-  .chat-dialog-input {
-    padding-left: 10px;
-    width: 50%;
-  }
+.chat-dialog-input {
+  padding-left: 10px;
+  width: 50%;
+}
 
-  .chat-dialog-sendbtn {
-    position: relative;
-    display: inline-block;
-    background-color: #2196f3;
-    border-radius: 5px;
-    color: #fff;
-    width: 50px;
-    height: 30px;
-    text-align: center;
-    line-height: 30px;
-    vertical-align: middle;
-  }
+.chat-dialog-sendbtn {
+  position: relative;
+  display: inline-block;
+  background-color: #2196f3;
+  border-radius: 5px;
+  color: #fff;
+  width: 50px;
+  height: 30px;
+  text-align: center;
+  line-height: 30px;
+  vertical-align: middle;
+}
 
-  .chat-dialog-sendimgbtn {
-    position: relative;
-    display: inline-block;
-    background-color: #2196f3;
-    border-radius: 5px;
-    color: #fff;
-    width: 80px;
-    height: 30px;
-    text-align: center;
-    line-height: 30px;
-    vertical-align: middle;
-  }
+.chat-dialog-sendimgbtn {
+  position: relative;
+  display: inline-block;
+  background-color: #2196f3;
+  border-radius: 5px;
+  color: #fff;
+  width: 80px;
+  height: 30px;
+  text-align: center;
+  line-height: 30px;
+  vertical-align: middle;
+}
 
-  .chat-dialog-sendimg {
-    /* display: inline-block; */
-    width: 30px;
-    /* height:30px; */
-    position: absolute;
-    left: 0;
-    top: 0;
-    opacity: 0;
-  }
+.chat-dialog-sendimg {
+  /* display: inline-block; */
+  width: 30px;
+  /* height:30px; */
+  position: absolute;
+  left: 0;
+  top: 0;
+  opacity: 0;
+}
 
-  .mu-dialog-body {
-    height: 100%;
-  }
+.mu-dialog-body {
+  height: 100%;
+}
 
-  .chat-dialog-appbar {
-    height: 10%;
-  }
+.chat-dialog-appbar {
+  height: 10%;
+}
 
-  .chat-dialog-body {
-    /* width:100%; */
-    position: relative;
-    /* background:red; */
-    height: 100%;
-  }
+.chat-dialog-body {
+  /* width:100%; */
+  position: relative;
+  /* background:red; */
+  height: 100%;
+}
 
-  .chat-dialog-inputbox {
-    padding: 10px;
-    height: 10%;
-    width: 100%;
-    position: relative;
-    line-height: 20px;
-    text-align: center;
-    /* background:blue; */
-  }
+.chat-dialog-inputbox {
+  padding: 10px;
+  height: 10%;
+  width: 100%;
+  position: relative;
+  line-height: 20px;
+  text-align: center;
+  /* background:blue; */
+}
 
-  .chat-dialog-msgbox {
-    height: 80%;
-    /* background: rgb(255, 255, 255); */
-    overflow: auto;
-  }
-  .msg-pic-dialog{
-    width:100%;
-  }
-  .msg-pic-dialog img{
-    width:100%;
-  }
-  .chat-wrapper {
-    position: relative;
-    /* margin: 0 auto; */
-    width: 100%;
-    /* height:600px; */
-  }
+.chat-dialog-msgbox {
+  height: 80%;
+  /* background: rgb(255, 255, 255); */
+  overflow: auto;
+  
+}
 
-  .chat-header {
-    height: 16%;
-    width: 100%;
-    position: absolute;
-    top: 0px;
-    text-align: center;
-    background: #2196f3;
-    color: #fff;
-  }
+.chat-wrapper {
+  position: relative;
+  /* margin: 0 auto; */
+  width: 100%;
+  /* height:600px; */
+}
 
-  .chat-header-title {
-    font-size: 20px;
-  }
+.chat-header {
+  height: 16%;
+  width: 100%;
+  position: absolute;
+  top: 0px;
+  text-align: center;
+  background: #2196f3;
+  color: #fff;
+}
 
-  .chat-body {
-    position: absolute;
-    top: 16%;
-    width: 100%;
-    height: 76%;
-    background: #e2e1d9;
-    /* border:1px solid red; */
-  }
+.chat-header-title {
+  font-size: 20px;
+}
 
-  .chat-body-list {
-    position: absolute;
-    background: rgb(247, 246, 246);
-    height: 100%;
-  }
+.chat-body {
+  position: absolute;
+  top: 16%;
+  width: 100%;
+  height: 76%;
+  background: #e2e1d9;
+  /* border:1px solid red; */
+}
 
-  .chat-footer {
-    /* border: 1px solid #000; */
-    background-color: #168ad6;
-    position: absolute;
-    bottom: 0px;
-    width: 100%;
-    height: 8%;
-  }
+.chat-body-list {
+  position: absolute;
+  background: rgb(247, 246, 246);
+  height: 100%;
+}
 
-  .chat-footer-nav {
-    height: 100%;
-  }
+.chat-footer {
+  /* border: 1px solid #000; */
+  background-color: #168ad6;
+  position: absolute;
+  bottom: 0px;
+  width: 100%;
+  height: 8%;
+}
 
-  .chat-userlist {
-    /* border-right:1px solid #000; */
-    /* min-height: 400px; */
-  }
+.chat-footer-nav {
+  height: 100%;
+}
 
-  .chat-showbox {
-    /* border-left: 1px solid #000; */
-    position: relative;
-    /* min-height: 400px; */
-  }
+.chat-userlist {
+  /* border-right:1px solid #000; */
+  /* min-height: 400px; */
+}
 
-  .chat-showInfo {
-    /* height: 250px; */
-  }
+.chat-showbox {
+  /* border-left: 1px solid #000; */
+  position: relative;
+  /* min-height: 400px; */
+}
 
-  .chat-inputText {
-    /* position: absolute;
+.chat-showInfo {
+  /* height: 250px; */
+}
+
+.chat-inputText {
+  /* position: absolute;
     bottom: 0px;
     width: 100%; */
-    /* border-top: 1px solid #000; */
-  }
+  /* border-top: 1px solid #000; */
+}
 
-  @media screen and (min-width: 750px) {
-    .chat-wrapper {
-      width: 50%;
-      margin:0 auto;
-      box-shadow: 1px 1px 5px #ccc;
-    }
+@media screen and (min-width: 750px) {
+  .chat-wrapper {
+    width: 50%;
+    margin: 0 auto;
+    box-shadow: 1px 1px 5px #ccc;
   }
-
+}
 </style>
