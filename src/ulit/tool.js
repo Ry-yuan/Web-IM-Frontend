@@ -16,7 +16,7 @@ module.exports = {
         }
     },
     checkUsername:function(val){
-        if(val.length <13 && val.length >= 6){
+        if(val.length <9 && val.length >= 2){
             return false;
         }
         return true;
