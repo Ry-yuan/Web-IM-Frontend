@@ -1,8 +1,8 @@
 <template>
-    <div class="login-wrapper">
+    <div class="login-wrapper" v-loading="loginLoad">
         <div class="login-bg"></div>
         <header class="login-header">
-            <span>来聊登录</span>
+            <span>嗨聊登录</span>
         </header>
 
         <section class="login-from">
@@ -20,81 +20,87 @@
 export default {
   data() {
     return {
-        username:'',
-        password:'',
-        errorText:''
+      username: "",
+      password: "",
+      errorText: "",
+      loginLoad: false
     };
   },
-  methods:{
-      submitLogin:function(){
-        //   loading
-        // 发送请求
-        this.$http.post('/api/userlogin',{
-            username:this.username,
-            password:this.password
-        }).then((data)=>{
-            console.log(data.data);
-            if(data.data.code == 0 ){
-                // this.$router.push('/chat');
-                location.href = '/chat';
-            }
-            if(data.data.code == 1002){
-                this.errorText = data.data.msg;
-            }
-            console.log('login success');
-        }).catch((err)=>{
-            console.log('login error');
+  methods: {
+    submitLogin: function() {
+      //   loading
+      this.loginLoad = true;
+      // 发送请求
+      this.$http
+        .post("/api/userlogin", {
+          username: this.username,
+          password: this.password
         })
-      }
+        .then(data => {
+          console.log(data.data);
+          if (data.data.code == 0) {
+            // this.$router.push('/chat');
+            location.href = "/chat";
+          }
+          if (data.data.code == 1002) {
+            this.errorText = data.data.msg;
+          }
+          console.log("login success");
+          this.loginLoad = false;
+        })
+        .catch(err => {
+          this.loginLoad = false;
+          console.log("login error");
+        });
+    }
   },
-  mounted() {
-    
-  }
+  mounted() {}
 };
 </script>
 
 <style>
-.login-bg{
-    position: absolute;
-    width:100%;
-    height:100%;
-    z-index:-100;
-    background:url(../../assets/images/bg.jpg);
-    background-repeat: no-repeat;
-    opacity: 0.5;
+.login-bg {
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  z-index: -100;
+  background: url(../../assets/images/bg.jpg);
+  background-repeat: no-repeat;
+  opacity: 0.5;
 }
-.login-wrapper{
-    /* border:1px solid #000; */
+.login-wrapper {
+  /* border:1px solid #000; */
 }
 /* 头部 */
-.login-header{
-    padding-top:100px;
-    text-align: center;
-    font-size: 20px;
-    font-weight: 500;
+.login-header {
+  padding-top: 100px;
+  text-align: center;
+  font-size: 20px;
+  font-weight: 500;
 }
 /* 表单 */
-.login-from{
-    text-align: center;
-    /* border:1px solid red; */
+.login-from {
+  text-align: center;
+  /* border:1px solid red; */
 }
 
-.login-btn{
-    margin-top:30px;
-    width:220px;
+.login-btn {
+  margin-top: 30px;
+  width: 220px;
 }
 
 /* 去登陆 */
-.login-tologin{
-    display:block;
-    margin:10px auto;
-    width:256px;
-    font-size: 12px; font-weight: 400;
-    text-align: right;
-    cursor: pointer;
-    color:#2196f3;
+.login-tologin {
+  display: block;
+  margin: 20px auto;
+  width: 256px;
+  font-size: 12px;
+  font-weight: 400;
+  text-align: center;
+  cursor: pointer;
+  color: #2196f3;
 }
-.login-tologin:hover{
-    color:#219999;
+.login-tologin:hover {
+  color: #219999;
 }
 </style>

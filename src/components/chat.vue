@@ -2,33 +2,80 @@
   <!-- <mu-flex class="flex-wrapper" justify-content="center"> -->
   <div ref="chat" class="chat-wrapper">
 
-    <header class="chat-header">
-      <p class="chat-header-title">一起嗨聊--!</p>
-      <div class="chat-sub-header">(｡･∀･)ﾉﾞ嗨！{{userInfo.username}}</div>
-    </header>
+    <mu-appbar style="width: 100%;" color="primary" class="chat-header">
+      <mu-button icon slot="left">
+        <mu-icon value="person"></mu-icon>
+      </mu-button>
+      <div>
+        嗨聊({{userInfo.username}})
+      </div>
+      <mu-button flat slot="right" @click="logoutOpen = true">注销</mu-button>
+    </mu-appbar>
+
+    <mu-dialog title="注销" width="360" :open.sync="logoutOpen">
+    你确定要退出吗？
+    <mu-button slot="actions" flat color="primary" @click="logout">确定</mu-button>
+    <mu-button slot="actions" flat color="primary" @click="logoutOpen = false">取消</mu-button>
+  </mu-dialog>
 
     <div class="chat-body">
       <mu-row>
         <mu-col span="12" sm="12" md="12" lg="12" xl="12" class="chat-body-list">
-          <div class="grid-cell chat-userlist">
-
+          <!-- 在线用户列表 -->
+          <div class="grid-cell chat-userlist" v-if="listType == 'online'">
             <mu-list>
-
-              <mu-list-item class="chat-list-item" @click="openFullscreenDialog(item)" avatar button :ripple="false" v-for="item in userlist"
+              <mu-list-item class="chat-list-item" @click="openFullscreenDialog(item)" avatar button :ripple="false" v-for="item in onlineUserList"
                 :key="item.user">
                 <mu-list-item-action>
                   <mu-avatar>
-                    <img src="../assets/images/user.png">
+                    <img v-if="item.sex == 0" src='../assets/images/p0.jpg'>
+                    <img v-if="item.sex == 1" src='../assets/images/p1.jpg'>
                   </mu-avatar>
                 </mu-list-item-action>
-                <!-- 用户名 -->
-                <mu-list-item-title>{{item.username}}</mu-list-item-title>
-                <!-- 提示 -->
-                <mu-badge :content="msgCount[item.username]+''" circle color="secondary" v-if="msgCount[item.username]!=undefined&&msgCount[item.username]>0 ">
-                  <mu-button icon>
-                    <mu-icon value="notifications"></mu-icon>
-                  </mu-button>
-                </mu-badge>
+                <mu-list-item-content>
+                  <mu-list-item-title>{{item.username}}</mu-list-item-title>
+                  <mu-list-item-sub-title  class="chat-online-text">在线</mu-list-item-sub-title>
+                </mu-list-item-content>
+
+                  <!-- 提示 -->
+                <mu-list-item-action>                  
+                  <mu-badge :content="msgCount[item.username]+''" circle color="secondary" v-if="msgCount[item.username]!=undefined&&msgCount[item.username]>0 ">
+                    <mu-button icon>
+                      <mu-icon value="notifications"></mu-icon>
+                    </mu-button>
+                  </mu-badge>
+                </mu-list-item-action>
+              </mu-list-item>
+            </mu-list>
+          </div>
+
+          <!-- 历史用户列表 -->
+          <div class="grid-cell chat-userlist" v-if="listType == 'history'" v-loading="historyUserLoad" data-mu-loading-text="skr!疯狂加载中...">
+            <mu-list textline="two-line">
+              <mu-list-item class="chat-list-item" @click="openFullscreenDialog(item)" avatar button :ripple="false" v-for="item in historyUserList"
+                :key="item.user">
+                <mu-list-item-action>
+                  <mu-avatar>
+                    <img src="../assets/images/p0.jpg">
+                  </mu-avatar>
+                </mu-list-item-action>
+                <mu-list-item-content>
+                  <!-- 用户名 -->
+                  <mu-list-item-title>{{item.username}}</mu-list-item-title>
+                  <mu-list-item-sub-title class="chat-online-text" v-if="item.status == 1">在线</mu-list-item-sub-title>
+                  <mu-list-item-sub-title v-if="item.status != 1">离线</mu-list-item-sub-title>
+                
+                </mu-list-item-content>
+
+                  <!-- 提示 -->
+                <mu-list-item-action>                  
+                  <mu-badge :content="msgCount[item.username]+''" circle color="secondary" v-if="msgCount[item.username]!=undefined&&msgCount[item.username]>0 ">
+                    <mu-button icon>
+                      <mu-icon value="notifications"></mu-icon>
+                    </mu-button>
+                  </mu-badge>
+                </mu-list-item-action>
+                  
               </mu-list-item>
             </mu-list>
           </div>
@@ -36,34 +83,35 @@
 
 
 
-        <!-- 移动端 -->
+        <!-- 对话框-->
         <mu-dialog ref="dialog" width="360" transition="slide-bottom" fullscreen :open.sync="openFullscreen">
-          <mu-appbar color="primary" :title='talkManInfo.username' class="chat-dialog-appbar">
+          <!-- 对话框头部 -->
+          <mu-appbar color="primary" :title="'正在和'+talkManInfo.username+'聊天'" class="chat-dialog-appbar">
             <mu-button slot="left" icon @click="closeFullscreenDialog">
               <mu-icon value="arrow_back" left></mu-icon>
             </mu-button>
           </mu-appbar>
-
-          <div class="chat-dialog-body">
-
-            <!-- 消息框 -->
+          <!-- 对话框身体 -->
+          <div class="chat-dialog-body" v-loading="msgDialogLoad" data-mu-loading-text="skr!疯狂加载中...">
+            <!-- 消息大框 -->
             <section class="chat-dialog-msgbox" ref="msgbox">
               <div class="msg-container" v-for="(item,index) in messageList">
-                
-                 <!-- 选项框 -->
-                  <ul v-show="item.showSelect" class="msg-select" :class="{'msg-select-right':(item.sender == userInfo.username),'msg-select-left':(item.sender != userInfo.username)}">
-                    <li @click="quoteMessage(item)">文本引用</li>
-                    <li v-if="item.showrecall&&((item.sender != talkManInfo.username))" @click="recallMessage(item,index)">撤回</li>
-                    <li v-if="item.showrecall&&((item.sender != talkManInfo.username))" @click="recallMessage(item,index)">修改</li>
-                  </ul>
 
-                <!-- 最新消息框 -->
+                <!-- 选项框 -->
+                <ul v-show="item.showSelect" class="msg-select" :class="{'msg-select-right':(item.sender == userInfo.username),'msg-select-left':(item.sender != userInfo.username)}">
+                  <li @click="quoteMessage(item)">文本引用</li>
+                  <li v-if="item.showrecall&&((item.sender != talkManInfo.username))" @click="recallMessage(item,index)">撤回</li>
+                  <li v-if="item.showrecall&&((item.sender != talkManInfo.username))" @click="modifyMessage(item,index)">修改</li>
+                </ul>
+
+                <!-- 最新消息提示 -->
                 <div class="msg-divider" v-if="item.isNewMsg">以下是最新消息</div>
 
-                <section v-if="item.isrecall== undefined || !item.isrecall" class="msg-msgbox" @mousedown="gtouchstart(item)" @mousemove="gtouchmove()"
-                  @mouseup="gtouchend(item)" @touchstart="gtouchstart(item)" @touchmove="gtouchmove()" @touchend="gtouchend(index)">
-                 
-                  <div class="msg-time">{{item.timeText}}</div>
+                <!-- 消息框 -->
+                <section v-if="item.isrecall== undefined || !item.isrecall" class="msg-msgbox" @click="item.showSelect = false" @dblclick="gtouchstart(item)"  @touchstart="gtouchstart(item)" @touchmove="gtouchmove()"
+                  @touchend="gtouchend(index)">
+
+                  <div class="msg-time"><span>{{item.timeText}}</span></div>
 
                   <div class="msg-avatar" :class="{'msg-avatar-right':(item.sender==userInfo.username)}">
                     <img src="../assets/images/p0.jpg">
@@ -74,6 +122,7 @@
                     <div v-if="!!item.picture" class="msg-img" @click="openPictureFn(item)">
                       <img :src="item.picture" alt="">
                     </div>
+                    <p v-if="item.ismodify" class="msg-notice-modify">消息被修改</p>
                   </div>
                 </section>
 
@@ -82,40 +131,44 @@
                 <div class="msg-recall-msg" v-if="item.isrecall">{{item.sender+item.message}}</div>
                 <!-- 放大图片 -->
                 <mu-dialog class="msg-pic-dialog" :open.sync="openPicture" @click="closePictureFn">
-                  <img :src="item.picture" alt="">
+                  <img :src="openPictureData" alt="">
+                </mu-dialog>
+
+                <!-- 修改消息 -->
+                <mu-dialog title="修改消息" width="360" :open.sync="modifyDialogShow">
+                  <mu-text-field v-model="modifyMessageText" placeholder="Please input......"></mu-text-field>
+                  <mu-button slot="actions" flat color="primary" @click="modifySave(item,index)">保存</mu-button>
+                  <mu-button slot="actions" flat color="primary" @click="modifyCancle">取消</mu-button>
                 </mu-dialog>
               </div>
 
+              <div ref="msgBottom"></div>
             </section>
-            <!-- 输入框 -->
+            <!-- 对话输入框 -->
             <div class="chat-dialog-inputbox">
               <mu-text-field class="chat-dialog-input" v-model="messageText" placeholder="请输入文字"></mu-text-field>
-              <!-- <div span="2"><mu-button class="chat-dialog-sendbtn"   small  color="primary" @click="sendMsg">发送</mu-button></div> -->
               <!-- 发送按钮 -->
               <div class="chat-dialog-sendbtn" @click="sendMsg">发送</div>
               <div class="chat-dialog-sendimgbtn">发送图片
                 <input class="chat-dialog-sendimg" type="file" multiple accept="image/*" @change="uploadImg">
               </div>
             </div>
-            <!-- <section class="chat-dialog-inputbox">
-              
-               
-            </section> -->
+            </section>
           </div>
         </mu-dialog>
       </mu-row>
-      <!-- </mu-container> -->
-
     </div>
 
+    <!-- 底部 -->
     <footer class="chat-footer">
-      <!-- <mu-container> -->
-      <mu-bottom-nav color="#168ad6" class="chat-footer-nav">
-        <mu-bottom-nav-item title="Recents" icon="restore"></mu-bottom-nav-item>
-        <mu-bottom-nav-item title="Favorites" icon="favorite"></mu-bottom-nav-item>
-        <mu-bottom-nav-item title="Nearby" icon="location_on"></mu-bottom-nav-item>
+      <mu-bottom-nav color="#168ad6" class="chat-footer-nav" :value.sync="listType" @change="showUserList(listType)">
+        <mu-bottom-nav-item title="在线用户" value="online" icon="group">
+
+        </mu-bottom-nav-item>
+
+        <mu-bottom-nav-item title="历史列表" value="history" icon="restore">
+        </mu-bottom-nav-item>
       </mu-bottom-nav>
-      <!-- </mu-container> -->
     </footer>
   </div>
 
@@ -123,15 +176,19 @@
 </template>
 <script>
   import io from "socket.io-client";
+  import moment from "moment";
+
   import Toast from "muse-ui-toast";
-  import setTime from "../ulit/setTime.js"
+  // import setTime from "../ulit/setTime.js";
   export default {
     data() {
       return {
         // 当前用户信息
         userInfo: {},
         // 在线用户列表
-        userlist: [],
+        onlineUserList: [],
+        // 历史用户列表
+        historyUserList: [],
         openFullscreen: false,
         messageText: "",
         // 当前聊天的用户信息
@@ -148,17 +205,110 @@
         // 放大图片框
         openPicture: false,
         openPictureData: "",
-        timeOutEvent: 0
+        timeOutEvent: 0,
+        // 修改消息
+        modifyMessageText: "",
+        modifyDialogShow: false,
+        listType: "online",
+        Ws_Path: "ws://172.20.10.2:8000/",
+        msgDialogLoad: false,
+        historyUserLoad: false,
+        logoutOpen:false
       };
     },
     methods: {
-      // 是否是同一个人
-      isSameMan(u1, u2) {
-        return u1 == u2;
+      // 注销
+      logout(){
+        let that = this;
+        // 注销请求
+        this.$http.post('/api/logout').then(data=>{
+          console.log('注销成功');
+          // 返回登录界面
+          // that.$router.push('/login');   
+          location.href = '/login';       
+        }).catch(err=>{
+          console.log(err);
+        });
       },
+      showUserList(value) {
+        let that = this;
+        let username = this.userInfo.username;
+        if (value == "history") {
+          that.historyUserLoad = true;
+          // 请求
+          this.$http
+            .get("/api/get_history_userlist?username=" + username)
+            .then(data => {
+              console.log("历史用户列表");
+              // console.log(data);
+              // 添加到历史列表中
+              that.historyUserList = data.data.data;
+              
+              // 找出在线的成员
+              that.onlineUserList.forEach((value,index)=>{
+                that.historyUserList.map(item=>{
+                  if(value.username == item.username){
+                    item.status = 1;
+                    return;
+                  }
+                })
+              });
+               console.log(that.historyUserList);
+              that.historyUserLoad = false;
+            })
+            .catch(err => {
+              that.historyUserLoad = false;
+              console.log(err);
+            });
+        }
+        if (value == "online") {
+          console.log("online list");
+        }
+      },
+      // 修改保存
+      modifySave(item, index) {
+        console.log("修改消息...");
+        console.log(item);
+        // 改变自己的消息
+        this.messageList[index].message = this.modifyMessageText;
+        this.messageList[index].ismodify = true;
+        // 隐藏修改框
+        this.modifyDialogShow = false;
+        let that = this;
+        // 修改数据的参数
+        let modifydata = {
+          from: item.sender,
+          to: this.talkManInfo.username,
+          socketid: this.talkManInfo.socketid,
+          message: item.message,
+          time: item.time,
+          // 修改的标志
+          ismodify: true
+        };
+        // 发送消息 socket
+        let socket = io.connect(this.Ws_Path);
+        // 发送修改数据
+        socket.emit("modify message", modifydata);
+      },
+      modifyCancle() {
+        // 清空修改消息
+        this.modifyMessageText = "";
+        // 关闭窗口
+        this.modifyDialogShow = false;
+      },
+      // 修改消息
+      modifyMessage(item, index) {
+        item.showSelect = false;
+        // 显示修改窗口
+        this.modifyDialogShow = true;
+        // 读取当前消息
+        this.modifyMessageText = item.message;
+      },
+
       // 撤回消息
       recallMessage(item, index) {
-        console.log('撤销');
+        item.showSelect = false;
+        console.log("撤销");
         console.log(item);
         let recallMsg = {
           from: this.userInfo.username,
@@ -173,14 +323,14 @@
         let localMsg = {
           sender: this.userInfo.username,
           time: new_time.getTime(),
-          message: '撤回一条消息',
+          message: "撤回一条消息",
           isrecall: true
-        }
+        };
         // 连接ws
-        let socket = io.connect("ws://localhost:8000/");
+        let socket = io.connect(this.Ws_Path);
 
         // 告诉对方删除的消息是什么
-        socket.emit('recall message', recallMsg);
+        socket.emit("recall message", recallMsg);
         // 删除本地该条消息
         this.messageList.splice(index, 1);
         // 如果是本地自己
@@ -202,15 +352,15 @@
           console.log("长按触发" + item.message);
           var now = new Date();
           var now_new = now.getTime();
-          if ((now_new - item.time) <= 1000 * 60 * 1) {
+          if (now_new - item.time <= 1000 * 60 * 1) {
             item.showrecall = true;
           } else {
             item.showrecall = false;
           }
           // 显示选项框
-          item.showSelect = true;
           this.timeOutEvent = 0;
-        }, 500); //这里设置定时器，定义长按触发长按事件
+          item.showSelect = true;
+        }, 300); //这里设置定时器，定义长按触发长按事件
         return false;
       },
       // 规定时间离开就清除计时器
@@ -220,16 +370,8 @@
         return false;
       },
       //手释放，如果时间内就释放，则取消长按事件，此时可以执行onclick应该执行的事件
-      gtouchend() { 
+      gtouchend() {
         clearTimeout(this.timeOutEvent); //清除定时器
-        // 当作点击事件
-        if(this.timeOutEvent !=0){
-          this.messageList.map(item=>{
-            if(item.showSelect){
-              item.showSelect = false;
-            }
-          })
-        }
         return false;
       },
       // 消息框中放大图片
@@ -271,6 +413,8 @@
       },
       // 获取历史消息
       getHistoryMessage(item) {
+        // 加载
+        this.msgDialogLoad = true;
         // 清除聊天信息
         this.messageList.length = 0;
         // 检查当前用户是否有本地存储
@@ -281,32 +425,36 @@
         this.$http
           .get("/api/gethistory?username=" + username + "&peer=" + peer)
           .then(data => {
-            console.log(data);
             let historymessage = data.data.data;
-
             // 处理messageList
             that.handleMessage(historymessage);
             // 存放在历史消息列表
             that.messageList.push.apply(that.messageList, historymessage);
             // that.messageList.concat(historymessage);
-            // console.log(historymessage);
+            console.log(that.messageList);
 
             // 滚动到最下面
             that.msgScroll();
             // 设置最新消息分界
             that.setIsNewflag(that.messageList, peer);
+            // 关闭加载
+            that.msgDialogLoad = false;
           })
           .catch(err => {
+            that.msgDialogLoad = false;
             console.log(err);
           });
       },
       // 处理数据
       handleMessage(messageList) {
-        messageList.map((item) => {
+        messageList.map(item => {
           item.showSelect = false;
           item.showrecall = false;
-          item.timeText = setTime(item.time);
-        })
+          item.ismodify = false;
+          item.timeText = moment(
+            moment(+item.time).format("YYYY-MM-DD HH:mm:ss")
+          ).fromNow();
+        });
       },
       closeFullscreenDialog() {
         this.openFullscreen = false;
@@ -320,7 +468,7 @@
 
       websocketFun() {
         // 连接ws
-        let socket = io.connect("ws://localhost:8000/");
+        let socket = io.connect(this.Ws_Path);
         //   接受广播的消息例子 登录用户显示
         let that = this;
         // 发送消息增加一个用户
@@ -328,9 +476,9 @@
 
         // 接受广播
         socket.on("broadcast message all", function (data) {
-          that.userlist = data;
-          console.log("socket....");
-          console.log(that.userlist);
+          that.onlineUserList = data;
+          console.log("当前在线用户：");
+          console.log(that.onlineUserList);
         });
 
         // 接收私人消息
@@ -341,45 +489,71 @@
           that.msgCounter(sender);
           data.showSelect = false;
           data.showrecall = false;
-          data.timeText = setTime(data.time);
+          data.ismodify = false;
+          data.timeText = moment(
+            moment(+data.time).format("YYYY-MM-DD HH:mm:ss")
+          ).fromNow();
           // 如果发送者是当前聊天的人，就加入消息队列中
-          if(sender == that.talkManInfo.username){
+          if (
+            sender == that.talkManInfo.username ||
+            that.talkManInfo.username == undefined
+          ) {
             that.messageList.push(data);
           }
-
           // 滚动到最后
           that.msgScroll();
         });
 
         // 接收撤回数据
-        socket.on('recall message', function (data) {
-          console.log('接受消息recall');
+        socket.on("recall message", function (data) {
+          console.log("接受消息recall");
           console.log(data);
           let new_time = new Date();
           let localMsg = {
             sender: data.from,
             time: new_time.getTime(),
-            message: '撤回一条消息',
+            message: "撤回一条消息",
             isrecall: true
-          }
+          };
           // 如果聊天是自己与自己 不操作下面
           if (data.from == data.to) {
             return;
           }
           // 删除数据遍历查找该条数据
           that.messageList.forEach((msgitem, index) => {
-            console.log('遍历');
+            console.log("遍历");
             console.log(msgitem);
             if (msgitem.time == data.time) {
               // 找到对应项删除
               that.messageList.splice(index, 1);
             }
-          })
+          });
           // 拿到数据添加到消息队列
           that.messageList.push(localMsg);
+        });
 
+        // 接收修改数据
+        socket.on("modify message", function (data) {
+          console.log("接受消息modify");
+          console.log(data);
+
+          // 如果聊天是自己与自己 不操作下面
+          if (data.from == data.to) {
+            return;
+          }
+          // 删除数据遍历查找该条数据
+          that.messageList.forEach((msgitem, index) => {
+            console.log("遍历");
+            console.log(msgitem);
+            if (msgitem.time == data.time) {
+              // 找到对应修改消息
+              that.messageList[index].message = data.message;
+              that.messageList[index].ismodify = true;
+            }
+          });
         });
       },
+
       // 设置某条消息后为最新消息
       setIsNewflag(msglist, sender) {
         let count = this.msgCount[sender];
@@ -409,12 +583,12 @@
           Toast.config({
             position: "top"
           });
-          Toast.warning("消息不能为空!");
+          Toast.error("消息不能为空!");
           return;
         }
 
         // 连接ws
-        let socket = io.connect("ws://localhost:8000/");
+        let socket = io.connect(this.Ws_Path);
         let that = this;
         let time = new Date();
 
@@ -436,13 +610,12 @@
           message: that.messageText,
           picture: that.picture || null,
           time: time.getTime(),
-          timeText: setTime(time),
+          timeText: moment(moment(+time).format("YYYY-MM-DD HH:mm:ss")).fromNow(),
           showSelect: false,
           showrecall: false
         };
         // 如果不是发给自己 添加消息
         if (data.from != data.to) {
-
           // 添加到消息列表中
           that.messageList.push(mydata);
         }
@@ -456,62 +629,53 @@
         let msgbox = this.$refs.msgbox;
         if (msgbox != undefined) {
           setTimeout(() => {
-            msgbox.scrollTop = Number.MAX_SAFE_INTEGER;
+            msgbox.scrollTop = msgbox.scrollHeight;
           }, 500);
         }
       }
     },
+
     mounted() {
+      let that = this;
       // 获得布局视口高度，设置外围高度
       this.$refs.chat.style.height = document.documentElement.clientHeight + "px";
-      // this.$refs.dialog.style.height = document.documentElement.clientHeight + "px";
-      // console.log(setTime(1532162822686));
-      // setTime(1532662852686);
       // 请求用户数据
       this.$http
         .get("/api/chat")
         .then(data => {
+          // code为1代表没有登录
+          if(data.data.code == 1){
+            // 返回登录页面
+            that.$router.push('/login');
+            return;
+          }
           this.userInfo = data.data.data;
           this.websocketFun();
         })
         .catch(err => {
           console.log(err);
         });
-
-      // 使用localstorge存储
-      // var storage = window.localStorage;
-      // var data1 = {
-      //     peer: "22",
-      //     msg: [
-      //       {
-      //         msg: "xx",
-      //         time: "ddd"
-      //       }
-      //     ]
-      //   };
-      //   var data2 = {
-      //     peer: "23",
-      //     msg: [
-      //       {
-      //         msg: "xx",
-      //         time: "ddd"
-      //       }
-      //     ]
-      //   };
-      // var arr = [];
-      // arr.push(data1);
-      // arr.push(data2);
-      // arr = JSON.stringify(arr);
-      // storage.setItem('xxx',arr);
-
-      // var d = storage.getItem('xxx');
-      // console.log(JSON.parse(d)[0]);
+      // 文本不被选中
+      document.body.onselectstart = document.body.ondrag = function () {
+        return false;
+      };
     }
   };
 
 </script>
 
 <style>
+  .msg-notice-modify {
+    font-size: 12px;
+    color: red;
+  }
+
+  /* 修改消息显示 */
+
+  .msg-container .msg-modify {
+    color: #ccc;
+  }
+
   /* 撤回消息框 */
 
   .msg-recall-msg {
@@ -535,7 +699,8 @@
   }
 
   /* 长按消息弹出框样式 */
-  .msg-select{
+
+  .msg-select {
     position: absolute;
     padding: 0px;
     top: -15px;
@@ -547,16 +712,19 @@
     color: #fff;
     line-height: 30px;
     text-align: center;
-    z-index:1000;
+    z-index: 1000;
   }
+
   .msg-select-left {
     left: 50px;
   }
-  .msg-select-right{
-    right:50px;
+
+  .msg-select-right {
+    right: 50px;
   }
+
   .msg-select-left:after {
-    content: '';
+    content: "";
     position: absolute;
     bottom: -12px;
     left: 20%;
@@ -565,8 +733,9 @@
     border-style: solid;
     border-color: #3d3a3a transparent transparent transparent;
   }
+
   .msg-select-right:after {
-    content: '';
+    content: "";
     position: absolute;
     bottom: -12px;
     right: 10%;
@@ -599,13 +768,10 @@
     width: 50%;
     height: 50%;
     padding: 5px;
-    /* border:1px solid #000; */
-    /* border-radius: 10px; */
   }
 
   .msg-img img {
-    width: 100%;
-    height: 100%;
+    width: 150px;
     border-radius: 10px;
   }
 
@@ -641,15 +807,20 @@
   }
 
   .msg-time {
-    width: 20%;
+    /* width: 20%;</span> */
     margin: 0 auto;
     margin-bottom: 10px;
-    background: #8d8b8a;
+    /* background: #8d8b8a; */
     border-radius: 5px;
     font-size: 12px;
     text-align: center;
     color: #fff;
+  }
 
+  .msg-time span {
+    padding: 3px;
+    border-radius: 3px;
+    background: #8d8b8a;
   }
 
   .msg-msgbox {
@@ -660,7 +831,8 @@
     word-wrap: break-word;
     overflow: hidden;
   }
-  .msg-avatar{
+
+  .msg-avatar {
     display: inline-block;
     width: 40px;
     height: 40px;
@@ -669,10 +841,12 @@
     /* border: 1px solid #000; */
     overflow: hidden;
   }
-  .msg-avatar img{
-    width:100%;
+
+  .msg-avatar img {
+    width: 100%;
     height: 100%;
   }
+
   /* .msg-avatar-left {
     display: inline-block;
     width: 40px;
@@ -681,14 +855,16 @@
     vertical-align: middle;
     border: 1px solid #000;
   } */
- .msg-avatar-right {
+
+  .msg-avatar-right {
     float: right;
   }
+
   /* 消息内容框 */
 
   .msg-text-left {
     position: relative;
-    padding: 8px;
+    padding:5px 20px;
     margin-left: 10px;
     vertical-align: middle;
     display: inline-block;
@@ -697,10 +873,11 @@
     background: #33a3dc;
     color: #fff;
     height: 100%;
+    z-index: 100;
   }
 
   .msg-text-left:after {
-    content: '';
+    content: "";
     position: absolute;
     top: 10px;
     left: -12px;
@@ -710,14 +887,12 @@
     border-color: transparent #33a3dc transparent transparent;
   }
 
- 
-
   /* 消息内容框 */
 
   .msg-text-right {
     position: relative;
     float: right;
-    padding: 8px;
+    padding:5px 20px;
     margin-right: 15px;
     vertical-align: middle;
     display: inline-block;
@@ -727,12 +902,13 @@
     color: #fff;
     background: #33a3dc;
     height: 100%;
+    z-index: 100;
     /* width:50%; */
   }
 
   .msg-text-right::after {
     position: absolute;
-    content: '';
+    content: "";
     display: block;
     border-width: 8px;
     border-style: solid;
@@ -760,7 +936,9 @@
     border-radius: 10px;
     background: rgb(228, 231, 233);
   }
-
+  .chat-online-text{
+    color:green;
+  }
   .chat-dialog-input {
     padding-left: 10px;
     width: 50%;
@@ -831,7 +1009,6 @@
     height: 80%;
     /* background: rgb(255, 255, 255); */
     overflow: auto;
-
   }
 
   .chat-wrapper {
@@ -842,7 +1019,7 @@
   }
 
   .chat-header {
-    height: 16%;
+    height: 10%;
     width: 100%;
     position: absolute;
     top: 0px;
@@ -857,11 +1034,11 @@
 
   .chat-body {
     position: absolute;
-    top: 16%;
+    top: 10%;
     width: 100%;
-    height: 76%;
+    height: 84%;
     background: #e2e1d9;
-    /* border:1px solid red; */
+    overflow: auto;
   }
 
   .chat-body-list {
