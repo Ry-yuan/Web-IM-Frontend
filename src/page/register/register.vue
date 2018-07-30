@@ -2,7 +2,7 @@
   <div class="register-wrapper" v-loading="registerLoad">
     <div class="register-bg"></div>
     <header class="register-header">
-      <span>嗨聊注册</span>
+      <span>(｡･∀･)ﾉﾞ嗨聊注册</span>
     </header>
 
     <section class="register-from">

@@ -13,10 +13,10 @@
     </mu-appbar>
 
     <mu-dialog title="注销" width="360" :open.sync="logoutOpen">
-    你确定要退出吗？
-    <mu-button slot="actions" flat color="primary" @click="logout">确定</mu-button>
-    <mu-button slot="actions" flat color="primary" @click="logoutOpen = false">取消</mu-button>
-  </mu-dialog>
+      你确定要退出吗？
+      <mu-button slot="actions" flat color="primary" @click="logout">确定</mu-button>
+      <mu-button slot="actions" flat color="primary" @click="logoutOpen = false">取消</mu-button>
+    </mu-dialog>
 
     <div class="chat-body">
       <mu-row>
@@ -34,11 +34,11 @@
                 </mu-list-item-action>
                 <mu-list-item-content>
                   <mu-list-item-title>{{item.username}}</mu-list-item-title>
-                  <mu-list-item-sub-title  class="chat-online-text">在线</mu-list-item-sub-title>
+                  <mu-list-item-sub-title class="chat-online-text">在线</mu-list-item-sub-title>
                 </mu-list-item-content>
 
-                  <!-- 提示 -->
-                <mu-list-item-action>                  
+                <!-- 提示 -->
+                <mu-list-item-action>
                   <mu-badge :content="msgCount[item.username]+''" circle color="secondary" v-if="msgCount[item.username]!=undefined&&msgCount[item.username]>0 ">
                     <mu-button icon>
                       <mu-icon value="notifications"></mu-icon>
@@ -64,18 +64,18 @@
                   <mu-list-item-title>{{item.username}}</mu-list-item-title>
                   <mu-list-item-sub-title class="chat-online-text" v-if="item.status == 1">在线</mu-list-item-sub-title>
                   <mu-list-item-sub-title v-if="item.status != 1">离线</mu-list-item-sub-title>
-                
+
                 </mu-list-item-content>
 
-                  <!-- 提示 -->
-                <mu-list-item-action>                  
+                <!-- 提示 -->
+                <mu-list-item-action>
                   <mu-badge :content="msgCount[item.username]+''" circle color="secondary" v-if="msgCount[item.username]!=undefined&&msgCount[item.username]>0 ">
                     <mu-button icon>
                       <mu-icon value="notifications"></mu-icon>
                     </mu-button>
                   </mu-badge>
                 </mu-list-item-action>
-                  
+
               </mu-list-item>
             </mu-list>
           </div>
@@ -91,12 +91,14 @@
               <mu-icon value="arrow_back" left></mu-icon>
             </mu-button>
           </mu-appbar>
+
           <!-- 对话框身体 -->
           <div class="chat-dialog-body" v-loading="msgDialogLoad" data-mu-loading-text="skr!疯狂加载中...">
             <!-- 消息大框 -->
             <section class="chat-dialog-msgbox" ref="msgbox">
               <div class="msg-container" v-for="(item,index) in messageList">
 
+                 
                 <!-- 选项框 -->
                 <ul v-show="item.showSelect" class="msg-select" :class="{'msg-select-right':(item.sender == userInfo.username),'msg-select-left':(item.sender != userInfo.username)}">
                   <li @click="quoteMessage(item)">文本引用</li>
@@ -108,10 +110,12 @@
                 <div class="msg-divider" v-if="item.isNewMsg">以下是最新消息</div>
 
                 <!-- 消息框 -->
-                <section v-if="item.isrecall== undefined || !item.isrecall" class="msg-msgbox" @click="item.showSelect = false" @dblclick="gtouchstart(item)"  @touchstart="gtouchstart(item)" @touchmove="gtouchmove()"
-                  @touchend="gtouchend(index)">
+                <section v-if="item.isrecall== undefined || !item.isrecall" class="msg-msgbox" @click="item.showSelect = false" @dblclick="gtouchstart(item)"
+                  @touchstart="gtouchstart(item)" @touchmove="gtouchmove()" @touchend="gtouchend(index)">
 
-                  <div class="msg-time"><span>{{item.timeText}}</span></div>
+                  <div class="msg-time">
+                    <span>{{item.timeText}}</span>
+                  </div>
 
                   <div class="msg-avatar" :class="{'msg-avatar-right':(item.sender==userInfo.username)}">
                     <img src="../assets/images/p0.jpg">
@@ -129,10 +133,6 @@
 
                 <!-- 撤回消息框 -->
                 <div class="msg-recall-msg" v-if="item.isrecall">{{item.sender+item.message}}</div>
-                <!-- 放大图片 -->
-                <mu-dialog class="msg-pic-dialog" :open.sync="openPicture" @click="closePictureFn">
-                  <img :src="openPictureData" alt="">
-                </mu-dialog>
 
                 <!-- 修改消息 -->
                 <mu-dialog title="修改消息" width="360" :open.sync="modifyDialogShow">
@@ -140,20 +140,28 @@
                   <mu-button slot="actions" flat color="primary" @click="modifySave(item,index)">保存</mu-button>
                   <mu-button slot="actions" flat color="primary" @click="modifyCancle">取消</mu-button>
                 </mu-dialog>
+
+                <!-- 放大图片 -->
+                <mu-dialog class="msg-pic-dialog" :open.sync="openPicture" @click="closePictureFn">
+                  <img :src="openPictureData" alt="">
+                </mu-dialog>
               </div>
 
-              <div ref="msgBottom"></div>
+    
+
             </section>
             <!-- 对话输入框 -->
             <div class="chat-dialog-inputbox">
               <mu-text-field class="chat-dialog-input" v-model="messageText" placeholder="请输入文字"></mu-text-field>
               <!-- 发送按钮 -->
               <div class="chat-dialog-sendbtn" @click="sendMsg">发送</div>
+
               <div class="chat-dialog-sendimgbtn">发送图片
                 <input class="chat-dialog-sendimg" type="file" multiple accept="image/*" @change="uploadImg">
               </div>
+
             </div>
-            </section>
+
           </div>
         </mu-dialog>
       </mu-row>
@@ -208,25 +216,26 @@
         timeOutEvent: 0,
         // 修改消息
         modifyMessageText: "",
+        modifyTime:'',
         modifyDialogShow: false,
         listType: "online",
-        Ws_Path: "ws://172.20.10.2:8000/",
+        Ws_Path: "ws://172.17.26.143:8000/",
         msgDialogLoad: false,
         historyUserLoad: false,
-        logoutOpen:false
+        logoutOpen: false,
       };
     },
     methods: {
       // 注销
-      logout(){
+      logout() {
         let that = this;
         // 注销请求
-        this.$http.post('/api/logout').then(data=>{
+        this.$http.post('/api/logout').then(data => {
           console.log('注销成功');
           // 返回登录界面
           // that.$router.push('/login');   
-          location.href = '/login';       
-        }).catch(err=>{
+          location.href = '/login';
+        }).catch(err => {
           console.log(err);
         });
       },
@@ -243,17 +252,17 @@
               // console.log(data);
               // 添加到历史列表中
               that.historyUserList = data.data.data;
-              
+
               // 找出在线的成员
-              that.onlineUserList.forEach((value,index)=>{
-                that.historyUserList.map(item=>{
-                  if(value.username == item.username){
+              that.onlineUserList.forEach((value, index) => {
+                that.historyUserList.map(item => {
+                  if (value.username == item.username) {
                     item.status = 1;
                     return;
                   }
                 })
               });
-               console.log(that.historyUserList);
+              console.log(that.historyUserList);
               that.historyUserLoad = false;
             })
             .catch(err => {
@@ -269,19 +278,25 @@
       modifySave(item, index) {
         console.log("修改消息...");
         console.log(item);
+        console.log(index);
         // 改变自己的消息
-        this.messageList[index].message = this.modifyMessageText;
-        this.messageList[index].ismodify = true;
+        let that = this;
+        this.messageList.map(value=>{
+          if(value.time == that.modifyTime){
+            value.message = that.modifyMessageText;
+            value.ismodify = true;
+            return;
+          }
+        })
         // 隐藏修改框
         this.modifyDialogShow = false;
-        let that = this;
         // 修改数据的参数
         let modifydata = {
           from: item.sender,
           to: this.talkManInfo.username,
           socketid: this.talkManInfo.socketid,
-          message: item.message,
-          time: item.time,
+          message: this.modifyMessageText,
+          time: this.modifyTime,
           // 修改的标志
           ismodify: true
         };
@@ -293,6 +308,7 @@
       modifyCancle() {
         // 清空修改消息
         this.modifyMessageText = "";
+        this.modifyTime = "";
         // 关闭窗口
         this.modifyDialogShow = false;
       },
@@ -303,6 +319,7 @@
         this.modifyDialogShow = true;
         // 读取当前消息
         this.modifyMessageText = item.message;
+        this.modifyTime = item.time;
       },
 
       // 撤回消息
@@ -390,10 +407,14 @@
         // 获得图片
         let file = event.target.files[0];
         let that = this;
-        console.log("file");
-        console.log(file);
+        // console.log("file");
+        // console.log(file);
         console.log(file.size);
-        console.log(file.type);
+        if(file.size > 1024000){
+          Toast.error("图片不能大于1M!");
+          return;
+        }
+        // console.log(file.type);
         // 使用reader读取file
         reader.readAsDataURL(file);
         // 读取完成后，在result中获取base64编码
@@ -430,9 +451,7 @@
             that.handleMessage(historymessage);
             // 存放在历史消息列表
             that.messageList.push.apply(that.messageList, historymessage);
-            // that.messageList.concat(historymessage);
             console.log(that.messageList);
-
             // 滚动到最下面
             that.msgScroll();
             // 设置最新消息分界
@@ -644,7 +663,7 @@
         .get("/api/chat")
         .then(data => {
           // code为1代表没有登录
-          if(data.data.code == 1){
+          if (data.data.code == 1) {
             // 返回登录页面
             that.$router.push('/login');
             return;
@@ -666,8 +685,9 @@
 
 <style>
   .msg-notice-modify {
+    margin:0px;
     font-size: 12px;
-    color: red;
+    color: rgb(243, 201, 16);
   }
 
   /* 修改消息显示 */
@@ -864,7 +884,7 @@
 
   .msg-text-left {
     position: relative;
-    padding:5px 20px;
+    padding: 5px 20px;
     margin-left: 10px;
     vertical-align: middle;
     display: inline-block;
@@ -892,7 +912,7 @@
   .msg-text-right {
     position: relative;
     float: right;
-    padding:5px 20px;
+    padding: 5px 20px;
     margin-right: 15px;
     vertical-align: middle;
     display: inline-block;
@@ -936,9 +956,11 @@
     border-radius: 10px;
     background: rgb(228, 231, 233);
   }
-  .chat-online-text{
-    color:green;
+
+  .chat-online-text {
+    color: green;
   }
+
   .chat-dialog-input {
     padding-left: 10px;
     width: 50%;
