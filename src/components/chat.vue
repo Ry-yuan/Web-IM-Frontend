@@ -103,7 +103,7 @@
                 <ul v-show="item.showSelect" class="msg-select" :class="{'msg-select-right':(item.sender == userInfo.username),'msg-select-left':(item.sender != userInfo.username)}">
                   <li @click="quoteMessage(item)">文本引用</li>
                   <li v-if="item.showrecall&&((item.sender != talkManInfo.username))" @click="recallMessage(item,index)">撤回</li>
-                  <li v-if="item.showrecall&&((item.sender != talkManInfo.username))" @click="modifyMessage(item,index)">修改</li>
+                  <li v-if="item.picture == null&&item.showrecall&&((item.sender != talkManInfo.username))" @click="modifyMessage(item,index)">修改</li>
                 </ul>
 
                 <!-- 最新消息提示 -->
@@ -152,14 +152,13 @@
             </section>
             <!-- 对话输入框 -->
             <div class="chat-dialog-inputbox">
-              <mu-text-field class="chat-dialog-input" v-model="messageText" placeholder="请输入文字"></mu-text-field>
+              <mu-text-field class="chat-dialog-input" @keyup.enter="sendMsg" v-model="messageText" placeholder="请输入文字"></mu-text-field>
               <!-- 发送按钮 -->
               <div class="chat-dialog-sendbtn" @click="sendMsg">发送</div>
 
               <div class="chat-dialog-sendimgbtn">发送图片
                 <input class="chat-dialog-sendimg" type="file" multiple accept="image/*" @change="uploadImg">
               </div>
-
             </div>
 
           </div>
@@ -548,7 +547,10 @@
             }
           });
           // 拿到数据添加到消息队列
-          that.messageList.push(localMsg);
+          // 判断当前聊天对象是否是撤回消息的人
+          if(that.talkManInfo.username == data.to){
+            that.messageList.push(localMsg);
+          }
         });
 
         // 接收修改数据
@@ -647,9 +649,9 @@
       msgScroll() {
         let msgbox = this.$refs.msgbox;
         if (msgbox != undefined) {
-          setTimeout(() => {
-            msgbox.scrollTop = msgbox.scrollHeight;
-          }, 500);
+            this.$nextTick(function(){
+              msgbox.scrollTop = msgbox.scrollHeight;
+            })
         }
       }
     },
