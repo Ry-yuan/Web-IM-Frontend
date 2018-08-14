@@ -1,7 +1,5 @@
 <template>
-  <!-- <mu-flex class="flex-wrapper" justify-content="center"> -->
   <div ref="chat" class="chat-wrapper">
-
     <mu-appbar style="width: 100%;" color="primary" class="chat-header">
       <mu-button icon slot="left">
         <mu-icon value="person"></mu-icon>
@@ -64,7 +62,6 @@
                   <mu-list-item-title>{{item.username}}</mu-list-item-title>
                   <mu-list-item-sub-title class="chat-online-text" v-if="item.status == 1">在线</mu-list-item-sub-title>
                   <mu-list-item-sub-title v-if="item.status != 1">离线</mu-list-item-sub-title>
-
                 </mu-list-item-content>
 
                 <!-- 提示 -->
@@ -81,8 +78,6 @@
           </div>
         </mu-col>
 
-
-
         <!-- 对话框-->
         <mu-dialog ref="dialog" width="360" transition="slide-bottom" fullscreen :open.sync="openFullscreen">
           <!-- 对话框头部 -->
@@ -96,7 +91,7 @@
           <div class="chat-dialog-body" v-loading="msgDialogLoad" data-mu-loading-text="skr!疯狂加载中...">
             <!-- 消息大框 -->
             <section class="chat-dialog-msgbox" ref="msgbox">
-              <div class="msg-container" v-for="(item,index) in messageList">
+              <div class="msg-container" v-for="(item,index) in messageList" :key="index">
 
                  
                 <!-- 选项框 -->
@@ -112,11 +107,9 @@
                 <!-- 消息框 -->
                 <section v-if="item.isrecall== undefined || !item.isrecall" class="msg-msgbox" @click="item.showSelect = false" @dblclick="gtouchstart(item)"
                   @touchstart="gtouchstart(item)" @touchmove="gtouchmove()" @touchend="gtouchend(index)">
-
                   <div class="msg-time">
                     <span>{{item.timeText}}</span>
                   </div>
-
                   <div class="msg-avatar" :class="{'msg-avatar-right':(item.sender==userInfo.username)}">
                     <img src="../assets/images/p0.jpg">
                   </div>
@@ -133,7 +126,6 @@
 
                 <!-- 撤回消息框 -->
                 <div class="msg-recall-msg" v-if="item.isrecall">{{item.sender+item.message}}</div>
-
                 <!-- 修改消息 -->
                 <mu-dialog title="修改消息" width="360" :open.sync="modifyDialogShow">
                   <mu-text-field v-model="modifyMessageText" placeholder="Please input......"></mu-text-field>
@@ -147,8 +139,6 @@
                 </mu-dialog>
               </div>
 
-    
-
             </section>
             <!-- 对话输入框 -->
             <div class="chat-dialog-inputbox">
@@ -160,7 +150,6 @@
                 <input class="chat-dialog-sendimg" type="file" multiple accept="image/*" @change="uploadImg">
               </div>
             </div>
-
           </div>
         </mu-dialog>
       </mu-row>
@@ -170,9 +159,7 @@
     <footer class="chat-footer">
       <mu-bottom-nav color="#168ad6" class="chat-footer-nav" :value.sync="listType" @change="showUserList(listType)">
         <mu-bottom-nav-item title="在线用户" value="online" icon="group">
-
         </mu-bottom-nav-item>
-
         <mu-bottom-nav-item title="历史列表" value="history" icon="restore">
         </mu-bottom-nav-item>
       </mu-bottom-nav>
@@ -184,7 +171,6 @@
 <script>
   import io from "socket.io-client";
   import moment from "moment";
-
   import Toast from "muse-ui-toast";
   // import setTime from "../ulit/setTime.js";
   export default {
@@ -218,7 +204,7 @@
         modifyTime:'',
         modifyDialogShow: false,
         listType: "online",
-        Ws_Path: "ws://172.17.26.143:8000/",
+        Ws_Path: "ws://localhost:8000/",
         msgDialogLoad: false,
         historyUserLoad: false,
         logoutOpen: false,
@@ -238,6 +224,7 @@
           console.log(err);
         });
       },
+
       showUserList(value) {
         let that = this;
         let username = this.userInfo.username;
@@ -273,6 +260,7 @@
           console.log("online list");
         }
       },
+
       // 修改保存
       modifySave(item, index) {
         console.log("修改消息...");
@@ -304,6 +292,7 @@
         // 发送修改数据
         socket.emit("modify message", modifydata);
       },
+
       modifyCancle() {
         // 清空修改消息
         this.modifyMessageText = "";
@@ -311,6 +300,7 @@
         // 关闭窗口
         this.modifyDialogShow = false;
       },
+
       // 修改消息
       modifyMessage(item, index) {
         item.showSelect = false;
@@ -344,7 +334,6 @@
         };
         // 连接ws
         let socket = io.connect(this.Ws_Path);
-
         // 告诉对方删除的消息是什么
         socket.emit("recall message", recallMsg);
         // 删除本地该条消息
@@ -356,11 +345,13 @@
           console.log(this.messageList);
         }
       },
+
       // 引用文本
       quoteMessage(item) {
         item.showSelect = false;
         this.messageText = item.message;
       },
+
       // 消息框长按显示
       gtouchstart(item) {
         // item.showSelect = false;
@@ -379,26 +370,31 @@
         }, 300); //这里设置定时器，定义长按触发长按事件
         return false;
       },
+
       // 规定时间离开就清除计时器
       gtouchmove() {
         clearTimeout(this.timeOutEvent);
         this.timeOutEvent = 0;
         return false;
       },
+
       //手释放，如果时间内就释放，则取消长按事件，此时可以执行onclick应该执行的事件
       gtouchend() {
         clearTimeout(this.timeOutEvent); //清除定时器
         return false;
       },
+
       // 消息框中放大图片
       openPictureFn(item) {
         this.openPicture = true;
         this.openPictureData = item.picture;
       },
+
       closePictureFn() {
         this.openPicture = false;
         this.openPictureData = "";
       },
+
       // 上传图片
       uploadImg(event) {
         // 新建读取文件的对象
@@ -406,23 +402,20 @@
         // 获得图片
         let file = event.target.files[0];
         let that = this;
-        // console.log("file");
-        // console.log(file);
         console.log(file.size);
         if(file.size > 1024000){
           Toast.error("图片不能大于1M!");
           return;
         }
-        // console.log(file.type);
         // 使用reader读取file
         reader.readAsDataURL(file);
         // 读取完成后，在result中获取base64编码
-
         reader.onload = function () {
           that.picture = this.result;
           that.sendMsg();
         };
       },
+
       // 打开对话框
       openFullscreenDialog(item) {
         this.openFullscreen = true;
@@ -431,6 +424,7 @@
         // 请求历史记录
         this.getHistoryMessage(item);
       },
+
       // 获取历史消息
       getHistoryMessage(item) {
         // 加载
@@ -463,6 +457,7 @@
             console.log(err);
           });
       },
+
       // 处理数据
       handleMessage(messageList) {
         messageList.map(item => {
@@ -474,6 +469,7 @@
           ).fromNow();
         });
       },
+
       closeFullscreenDialog() {
         this.openFullscreen = false;
         // 消除消息提示
@@ -498,7 +494,6 @@
           console.log("当前在线用户：");
           console.log(that.onlineUserList);
         });
-
         // 接收私人消息
         socket.on("receive private meassge", function (data) {
           console.log("接收数据");
@@ -521,7 +516,6 @@
           // 滚动到最后
           that.msgScroll();
         });
-
         // 接收撤回数据
         socket.on("recall message", function (data) {
           console.log("接受消息recall");
@@ -586,6 +580,7 @@
           msglist[flat].isNewMsg = true;
         }
       },
+
       msgCounter(sender) {
         // console.log(this.msgCount);
         // this.msgCount[sender] = 1;
@@ -598,6 +593,7 @@
         // console.log('计数');
         console.log(this.msgCount);
       },
+
       // 发送我的消息
       sendMsg() {
         if (this.messageText.trim().length == 0 && this.picture == null) {
@@ -607,7 +603,6 @@
           Toast.error("消息不能为空!");
           return;
         }
-
         // 连接ws
         let socket = io.connect(this.Ws_Path);
         let that = this;
@@ -622,10 +617,8 @@
           time: time.getTime(),
           type: 1
         };
-
         // 发送消息到服务器
         socket.emit("send private message", data);
-
         let mydata = {
           sender: that.userInfo.username,
           message: that.messageText,
@@ -645,6 +638,7 @@
         this.messageText = "";
         this.picture = null;
       },
+      
       // 消息滚动
       msgScroll() {
         let msgbox = this.$refs.msgbox;
