@@ -4,33 +4,55 @@
     <header class="register-header">
       <span>(｡･∀･)ﾉﾞ嗨聊注册</span>
     </header>
-
     <section class="register-from">
       <mu-container class="register-from-input">
-        <mu-text-field v-model="username" label="UserName" label-float help-text="用户名为2-8长度的字符" :error-text="userError" icon="account_circle"></mu-text-field>
-        <br/>
-        <mu-text-field :action-icon="visibility1 ? 'visibility' : 'visibility_off'" :action-click="() => (visibility1 = !visibility1)" :type="visibility1 ? 'text' : 'password'"  v-model="password" label="Password" label-float help-text="密码至少6位" :error-text="passError"
-          icon="locked"></mu-text-field>
-        <br/>
-        <mu-text-field :action-icon="visibility2 ? 'visibility' : 'visibility_off'" :action-click="() => (visibility2 = !visibility2)" :type="visibility2 ? 'text' : 'password'"  v-model="enpassword" label="Password"   label-float error-text="" icon="locked"></mu-text-field>
-        <br/>
+        <mu-text-field
+          v-model="username"
+          label="UserName"
+          label-float
+          help-text="用户名为2-8长度的字符"
+          :error-text="userError"
+          icon="account_circle"
+        ></mu-text-field>
+        <br>
+        <mu-text-field
+          :action-icon="visibility1 ? 'visibility' : 'visibility_off'"
+          :action-click="() => (visibility1 = !visibility1)"
+          :type="visibility1 ? 'text' : 'password'"
+          v-model="password"
+          label="Password"
+          label-float
+          help-text="密码至少6位"
+          :error-text="passError"
+          icon="locked"
+        ></mu-text-field>
+        <br>
+        <mu-text-field
+          :action-icon="visibility2 ? 'visibility' : 'visibility_off'"
+          :action-click="() => (visibility2 = !visibility2)"
+          :type="visibility2 ? 'text' : 'password'"
+          v-model="enpassword"
+          label="Password"
+          label-float
+          error-text
+          icon="locked"
+        ></mu-text-field>
+        <br>
         <div>
-
-        <mu-radio v-model="sex" style="margin-right: 16px;" value="0" label="男" ></mu-radio>
-        <mu-radio v-model="sex" style="margin-right: 16px;" value="1" label="女"></mu-radio>
+          <mu-radio v-model="sex" style="margin-right: 16px;" value="0" label="男"></mu-radio>
+          <mu-radio v-model="sex" style="margin-right: 16px;" value="1" label="女"></mu-radio>
         </div>
-        <br/>
+        <br>
         <mu-button class="register-btn" color="primary" @click="submitRegister">注册</mu-button>
-        <router-link to='/login' class="register-tologin">已有账号去登陆</router-link>
+        <router-link to="/login" class="register-tologin">已有账号去登陆</router-link>
       </mu-container>
     </section>
-
   </div>
 </template>
+
 <script>
 import Tool from "../../ulit/tool.js";
 import Toast from "muse-ui-toast";
-
 export default {
   data() {
     return {
@@ -73,9 +95,9 @@ export default {
         return;
       }
       // 弹框
-          Toast.config({
-            position: "top"
-          });
+      Toast.config({
+        position: "top"
+      });
       // 加载
       this.registerLoad = true;
       // POST
@@ -83,11 +105,11 @@ export default {
         .post("/api/userregister", {
           username: this.username,
           password: this.password,
-          sex:this.sex
+          sex: this.sex
         })
         .then(data => {
           this.registerLoad = false;
-          if(data.data.code == 1001){
+          if (data.data.code == 1001) {
             this.$toast.error("用户已存在，请重新注册");
             return;
           }
@@ -122,7 +144,6 @@ export default {
 }
 
 /* 头部 */
-
 .register-header {
   padding-top: 100px;
   text-align: center;
@@ -131,7 +152,6 @@ export default {
 }
 
 /* 表单 */
-
 .register-from {
   text-align: center;
 }

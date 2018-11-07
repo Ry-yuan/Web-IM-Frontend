@@ -1,18 +1,27 @@
 <template>
-    <div class="login-wrapper" v-loading="loginLoad">
-        <div class="login-bg"></div>
-        <header class="login-header">
-            <span>(｡･∀･)ﾉﾞ嗨聊登录</span>
-        </header>
-        <section class="login-from">
-            <mu-container class="login-from-input">
-                <mu-text-field v-model="username" label="UserName" label-float  icon="account_circle"></mu-text-field><br/>
-                <mu-text-field type="password" v-model="password" label="Password" label-float  :error-text="errorText" icon="locked" ></mu-text-field><br/>
-                <mu-button class="login-btn" color="primary" @click="submitLogin">登录</mu-button>
-                <router-link to="/register" class="login-tologin">没有账号？快去注册</router-link>
-            </mu-container>
-        </section>
-    </div>
+  <div class="login-wrapper" v-loading="loginLoad">
+    <div class="login-bg"></div>
+    <header class="login-header">
+      <span>(｡･∀･)ﾉﾞ嗨聊登录</span>
+    </header>
+    <section class="login-from">
+      <mu-container class="login-from-input">
+        <mu-text-field v-model="username" label="UserName" label-float icon="account_circle"></mu-text-field>
+        <br>
+        <mu-text-field
+          type="password"
+          v-model="password"
+          label="Password"
+          label-float
+          :error-text="errorText"
+          icon="locked"
+        ></mu-text-field>
+        <br>
+        <mu-button class="login-btn" color="primary" @click="submitLogin">登录</mu-button>
+        <router-link to="/register" class="login-tologin">没有账号？快去注册</router-link>
+      </mu-container>
+    </section>
+  </div>
 </template>
 <script>
 export default {
@@ -43,8 +52,8 @@ export default {
           if (data.data.code == 1002) {
             this.errorText = data.data.msg;
           }
-          if(data.data.code == 1003){
-              this.errorText ="无此账号";
+          if (data.data.code == 1003) {
+            this.errorText = "无此账号";
           }
           console.log("login success");
           this.loginLoad = false;

@@ -14,17 +14,15 @@ Vue.use(Toast);
 Vue.use(Loading);
 // 引入axios
 import axios from 'axios';
-Vue.prototype.$http= axios ;
+Vue.prototype.$http = axios;
 
 Vue.config.productionTip = false
 /* eslint-disable no-new */
 new Vue({
   el: '#app',
   router,
-  components: { App },
+  components: {
+    App
+  },
   template: '<App/>'
-})
-
-// var xhr = new XMLHttpRequest();
-// xhr.open("GET","http://localhost:8080/api",true);
-// xhr.send();
+});
